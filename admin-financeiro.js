@@ -7,7 +7,7 @@ var FX_CSS = '<style>'
   + ':root[data-theme="dark"] .fx{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300}'
   + '.fx .card{padding:14px;margin-top:10px}.fx h3{margin:0;font-size:15px}'
   + '.fx-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}'
-  + '.fx-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}'
+  + '.fx-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}'
   + '.fx-kpi{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px 14px;min-width:0}'
   + '.fx-kpi small{display:block;color:var(--mut)}.fx-kpi b{display:block;font-size:clamp(18px,2.3vw,26px);font-weight:800;line-height:1.15;margin-top:2px;white-space:nowrap}'
   + '.fx-kpi .sb{font-size:12px;color:var(--mut);margin-top:3px;line-height:1.3}'
@@ -61,8 +61,10 @@ function finLucro() {
   /* ---- indicadores principais ---- */
   var kpis = '<div class="fx-kpis">'
     + '<div class="fx-kpi"><small>Receita bruta</small><b>' + R(rb) + '</b><div class="sb">placas ' + R(L.receita_placas) + ' + frete ' + R(L.frete_cobrado) + '</div></div>'
-    + '<div class="fx-kpi"><small>Lucro bruto</small><b style="color:' + sinal(L.lucro_bruto) + '">' + R(L.lucro_bruto) + '</b><div class="sb">depois de placas, ICMS, taxas e envio</div></div>'
-    + '<div class="fx-kpi"><small>Despesas operacionais</small><b>' + R(L.despesas) + '</b><div class="sb">' + L.despesas_itens.length + ' lançamento(s) no período</div></div>'
+    + '<div class="fx-kpi"><small>Despesas de ativos</small><b>' + R(L.despesas_ativos) + '</b><div class="sb">compras de placas ' + R(L.ativos_compras) + (L.ativos_manuais ? ' + outros ' + R(L.ativos_manuais) : '') + '</div></div>'
+    + '<div class="fx-kpi"><small>Receita − ativos</small><b style="color:' + sinal(L.receita_menos_ativos) + '">' + R(L.receita_menos_ativos) + '</b><div class="sb">receita bruta − despesas de ativos</div></div>'
+    + '<div class="fx-kpi"><small>Lucro bruto</small><b style="color:' + sinal(L.lucro_bruto) + '">' + R(L.lucro_bruto) + '</b><div class="sb">receita − custo das placas vendidas, ICMS, taxas e envio</div></div>'
+    + '<div class="fx-kpi"><small>Despesas operacionais</small><b>' + R(L.despesas) + '</b><div class="sb">saem do lucro bruto · ' + L.despesas_itens.length + ' lançamento(s)</div></div>'
     + '<div class="fx-kpi main" style="border-color:' + sinal(L.lucro_final) + '"><small>Lucro estimado final</small><b style="color:' + sinal(L.lucro_final) + '">' + R(L.lucro_final) + '</b><div class="sb">margem ' + fxPc(L.margem_pct) + ' · ' + R(L.lucro_por_placa) + '/placa · ' + R(L.lucro_por_pedido) + '/pedido · ' + L.pedidos + ' pedido(s), ' + L.placas + ' placas</div></div>'
     + '</div>';
 

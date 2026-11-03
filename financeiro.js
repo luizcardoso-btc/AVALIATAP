@@ -67,7 +67,7 @@ function despesasDoPeriodo(j, primeiraData) {
   const iniData = j.iniMs === null ? ([primeiraData, um('SELECT MIN(data) d FROM despesas').d].filter(Boolean).sort()[0] || j.hoje) : new Date(j.iniMs - 3 * 3600e3).toISOString().slice(0, 10);
   const fimData = j.hoje;
   const dias = Math.max(1, Math.round((new Date(fimData + 'T12:00:00Z') - new Date(iniData + 'T12:00:00Z')) / 864e5) + 1);
-  let total = 0; const itens = [];
+  let total = 0, totalAtivos = 0; const itens = [], itensAtivos = [];
   for (const d of db.prepare('SELECT * FROM despesas ORDER BY data DESC').all()) {
     let v = 0, rateio = 0;
     if (!d.mensal) { if (d.data >= iniData && d.data <= fimData) v = d.valor; }
@@ -75,9 +75,14 @@ function despesasDoPeriodo(j, primeiraData) {
       const de = d.data > iniData ? d.data : iniData;
       if (de <= fimData) { const dd = Math.round((new Date(fimData + 'T12:00:00Z') - new Date(de + 'T12:00:00Z')) / 864e5) + 1; rateio = dd; v = d.valor * dd / 30.4375; }
     }
-    if (v > 0) { total += v; itens.push({ id: d.id, descricao: d.descricao, categoria: d.categoria, mensal: !!d.mensal, valor: d.valor, dias_rateio: rateio, valor_periodo: r2(v) }); }
+    if (v > 0) {
+      const it = { id: d.id, descricao: d.descricao, categoria: d.categoria, mensal: !!d.mensal, valor: d.valor, dias_rateio: rateio, valor_periodo: r2(v) };
+      if (d.tipo === 'ativo') { totalAtivos += v; itensAtivos.push(it); } else { total += v; itens.push(it); }
+    }
   }
-  return { total: r2(total), itens, dias, iniData, fimData };
+  // Compras de placas (estoque) pagas no período também são "despesas de ativos".
+  const compras = r2(um("SELECT COALESCE(SUM(quantidade*COALESCE(custo_unit,0)+custo_extra),0) n FROM estoque_mov WHERE tipo='compra' AND data >= ? AND data <= ?", iniData, fimData).n);
+  return { total: r2(total), itens, ativos_manuais: r2(totalAtivos), ativos_itens: itensAtivos, ativos_compras: compras, dias, iniData, fimData };
 }
 
 // ---------- o cálculo principal ----------
@@ -125,6 +130,9 @@ function lucro(periodo) {
   const L = {
     periodo: j.rotulo, chave: String(periodo || 'all'), dias,
     ...Object.fromEntries(Object.entries(T).map(([k, v]) => [k, ['pedidos', 'placas', 'taxas_reais', 'taxas_estimadas', 'envio_real', 'envio_estimado'].includes(k) ? v : r2(v)])),
+    // Divisão do balanço: receita − ativos (visão de caixa); lucro bruto (receita − custos diretos); despesas operacionais saem do lucro bruto.
+    despesas_ativos: r2(desp.ativos_compras + desp.ativos_manuais), ativos_compras: desp.ativos_compras, ativos_manuais: desp.ativos_manuais, ativos_itens: desp.ativos_itens,
+    receita_menos_ativos: r2(T.receita_bruta - desp.ativos_compras - desp.ativos_manuais),
     lucro_bruto: r2(lucroBruto), despesas: desp.total, despesas_itens: desp.itens, lucro_final: r2(final),
     margem_pct: pct(final, T.receita_bruta), lucro_por_placa: r2(lucroPlaca), lucro_por_pedido: T.pedidos ? r2(final / T.pedidos) : 0,
     ponto_equilibrio_placas: lucroBruto > 0 && desp.total > 0 && T.placas ? Math.ceil(desp.total / (lucroBruto / T.placas)) : 0,
