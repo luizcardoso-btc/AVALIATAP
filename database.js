@@ -499,6 +499,8 @@ CREATE TABLE IF NOT EXISTS sales (
     );
     CREATE INDEX IF NOT EXISTS idx_cardapio_ev ON cardapio_eventos (cardapio_id, tipo, criado_em);
   `),
+  // v28 — despesas com tipo: 'operacional' (padrão, sai do lucro bruto) ou 'ativo' (compra de estoque/equipamento, entra na linha "Receita − ativos"). Só adiciona.
+  db => db.exec(`ALTER TABLE despesas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'operacional';`),
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });

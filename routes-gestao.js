@@ -107,7 +107,7 @@ router.post('/despesas', (req, res) => {
   if (valor === null) return res.status(400).json({ error: 'Informe o valor da despesa.' });
   const data = b.data ? String(b.data) : hoje();
   if (!dataOk(data)) return res.status(400).json({ error: 'Data inválida.' });
-  const r = db.prepare('INSERT INTO despesas (data, descricao, categoria, valor, mensal) VALUES (?, ?, ?, ?, ?)').run(data, descricao, txt(b.categoria, 40), F.r2(valor), b.mensal ? 1 : 0);
+  const r = db.prepare('INSERT INTO despesas (data, descricao, categoria, valor, mensal, tipo) VALUES (?, ?, ?, ?, ?, ?)').run(data, descricao, txt(b.categoria, 40), F.r2(valor), b.mensal ? 1 : 0, b.tipo === 'ativo' ? 'ativo' : 'operacional');
   res.json({ id: r.lastInsertRowid });
 });
 router.delete('/despesas/:id', (req, res) => { db.prepare('DELETE FROM despesas WHERE id=?').run(req.params.id); res.json({ ok: true }); });
