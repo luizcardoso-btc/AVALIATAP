@@ -323,20 +323,35 @@ router.post('/orders-producao-lote', (req, res) => {
 router.post('/resellers/:id/liberar-placas', (req, res) => {
   const rev = db.prepare('SELECT id, name FROM resellers WHERE id = ?').get(req.params.id);
   if (!rev) return res.status(404).json({ error: 'Revendedor não encontrado.' });
-  const b = req.body || {}, qa = Number(b.qty_azul) || 0, qp = Number(b.qty_preta) || 0, qtd = qa + qp;
-  if (!Number.isInteger(qa) || !Number.isInteger(qp) || qa < 0 || qp < 0 || qtd < 1 || qtd > 5000) return res.status(400).json({ error: 'Informe quantas placas azuis e/ou pretas (ao menos 1).' });
+  const b = req.body || {}, qa = Number(b.qty_azul) || 0, qp = Number(b.qty_preta) || 0;
+  // Demais modelos (Pix, Redes sociais, Instagram, WhatsApp…): [{ produto_id, qty }]
+  const itens = [];
+  for (const it of (Array.isArray(b.itens) ? b.itens : [])) {
+    const pid = Number(it && it.produto_id), q = Number(it && it.qty) || 0;
+    if (!q) continue;
+    if (!Number.isInteger(pid) || !Number.isInteger(q) || q < 0 || q > 5000) return res.status(400).json({ error: 'Quantidade inválida em um dos modelos.' });
+    const p = db.prepare("SELECT id, nome FROM produtos WHERE id = ? AND categoria LIKE 'Placas%'").get(pid);
+    if (!p) return res.status(400).json({ error: 'Um dos modelos escolhidos não existe no catálogo.' });
+    const ja = itens.find(x => x.produto_id === pid);
+    if (ja) ja.qty += q; else itens.push({ produto_id: p.id, nome: p.nome, qty: q });
+  }
+  const qo = itens.reduce((s, x) => s + x.qty, 0), qtd = qa + qp + qo;
+  if (!Number.isInteger(qa) || !Number.isInteger(qp) || qa < 0 || qp < 0 || qtd < 1 || qtd > 5000) return res.status(400).json({ error: 'Informe quantas placas de cada modelo (ao menos 1).' });
+  const obs = String(b.obs || '').replace(/\s+/g, ' ').trim().slice(0, 300);
   let unit = String(b.unit_price ?? '').trim() === '' ? null : lerValor(b.unit_price);
   if (unit === false || (unit !== null && (unit < 0 || unit > 1000))) return res.status(400).json({ error: 'Preço por placa inválido. Use reais, ex.: 17,50.' });
   if (unit === null) { const t = db.prepare('SELECT * FROM price_tiers ORDER BY min_qty').all(); const f = t.find(x => qtd >= x.min_qty && qtd <= x.max_qty); unit = f ? f.unit_price : (t.length ? (qtd > t[t.length - 1].max_qty ? t[t.length - 1].unit_price : t[0].unit_price) : 25); }
   const total = Math.round(unit * qtd * 100) / 100;
   const id = db.transaction(() => {
-    const n = db.prepare(`INSERT INTO orders (reseller_id, qty_azul, qty_preta, unit_price, total, status, payment_method, shipping_fee, custo_frete_real, mp_fee, mp_net, a_receber)
-      VALUES (?, ?, ?, ?, ?, 'aguardando_pagamento', 'pix', 0, 0, 0, ?, ?)`).run(rev.id, qa, qp, unit, total, total, b.a_receber === false || b.a_receber === 0 || b.a_receber === '0' ? 0 : 1).lastInsertRowid;
-    pedidos.marcarPago(n, { manual: true, nota: 'Liberação interna (pago por fora, entregue em mãos)' });
+    const n = db.prepare(`INSERT INTO orders (reseller_id, qty_azul, qty_preta, qty_outras, unit_price, total, status, payment_method, shipping_fee, custo_frete_real, mp_fee, mp_net, a_receber)
+      VALUES (?, ?, ?, ?, ?, ?, 'aguardando_pagamento', 'pix', 0, 0, 0, ?, ?)`).run(rev.id, qa, qp, qo, unit, total, total, b.a_receber === false || b.a_receber === 0 || b.a_receber === '0' ? 0 : 1).lastInsertRowid;
+    const insIt = db.prepare('INSERT INTO order_items (order_id, produto_id, nome, qty) VALUES (?, ?, ?, ?)');
+    itens.forEach(x => insIt.run(n, x.produto_id, x.nome, x.qty));
+    pedidos.marcarPago(n, { manual: true, nota: 'Liberação interna (pago por fora, entregue em mãos)' + (obs ? ' · ' + obs : '') });
     db.prepare("UPDATE orders SET status='entregue', producao_at=datetime('now'), enviado_at=datetime('now'), entregue_at=datetime('now') WHERE id=?").run(n);
     return n;
   })();
-  pedidos.registrarEvento({ origem: 'admin', order_id: id, resultado: 'placas_liberadas', detalhe: `${rev.name}: ${qa} azul + ${qp} preta a ${unit} = ${total}` });
+  pedidos.registrarEvento({ origem: 'admin', order_id: id, resultado: 'placas_liberadas', detalhe: `${rev.name}: ${qa} azul + ${qp} preta` + itens.map(x => ` + ${x.qty} ${x.nome}`).join('') + ` a ${unit} = ${total}` + (obs ? ' · ' + obs : '') });
   res.json(resposta(id));
 });
 
