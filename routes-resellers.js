@@ -41,7 +41,7 @@ router.post('/conversor', (req, res) => {
 });
 
 // Aponta uma placa para um link gerado no conversor (NFC / QR passam a abrir esse destino).
-const TIPO_PLACA = { google: 'Google Avaliações', whatsapp: 'WhatsApp', instagram: 'Instagram', facebook: 'Facebook', pix: 'Link personalizado', biosite: 'Site' };
+const TIPO_PLACA = { google: 'Google Avaliações', whatsapp: 'WhatsApp', instagram: 'Instagram', facebook: 'Facebook', pix: 'Pix', biosite: 'Site' };
 router.post('/plates/:id/direcionar', (req, res) => {
   const plate = db.prepare('SELECT id FROM plates WHERE id = ? AND reseller_id = ?').get(req.params.id, req.resellerId);
   if (!plate) return res.status(404).json({ error: 'Placa não encontrada.' });
@@ -104,7 +104,7 @@ router.get('/price-tiers', (req, res) => {
 });
 
 // Placas do revendedor
-const TIPOS_DESTINO = ['Google Avaliações', 'Instagram', 'Facebook', 'Site', 'Cardápio', 'Link personalizado',
+const TIPOS_DESTINO = ['Google Avaliações', 'Instagram', 'Facebook', 'Site', 'Cardápio', 'Pix', 'Link personalizado',
   'WhatsApp', 'Outro']; // os dois últimos só existem por compatibilidade com placas antigas
 
 // Aceita "instagram.com/loja" (sem https) e confere se é um endereço web válido.

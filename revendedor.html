@@ -261,8 +261,8 @@ async function edPl(id){selPl=id;var t=new Date();t.setHours(0,0,0,0);
 function getPl(id){return PLATES.filter(function(x){return x.id===id})[0]}
 function qrUrl(p){return PUBLIC_BASE+'/r/'+p.code}
 function qrSvg(p){if(!window.qrcode)return '';var q=qrcode(0,'M');q.addData(qrUrl(p));q.make();var n=q.getModuleCount(),m=2,d='';for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.isDark(r,c))d+='M'+(c+m)+' '+(r+m)+'h1v1h-1z';var z=n+2*m;return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+z+' '+z+'" shape-rendering="crispEdges"><rect width="'+z+'" height="'+z+'" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>'}
-var TIPOS=['Google Avaliações','Instagram','Facebook','Site','Cardápio','Link personalizado'];
-var PH={'Google Avaliações':'https://g.page/r/sua-loja/review','Instagram':'https://instagram.com/seu_perfil','Facebook':'https://facebook.com/sua.pagina','Site':'https://www.seusite.com.br','Cardápio':'https://link-do-seu-cardapio.com','Link personalizado':'https://'};
+var TIPOS=['Google Avaliações','Instagram','Facebook','Site','Cardápio','Pix','Link personalizado'];
+var PH={'Google Avaliações':'https://g.page/r/sua-loja/review','Instagram':'https://instagram.com/seu_perfil','Facebook':'https://facebook.com/sua.pagina','Site':'https://www.seusite.com.br','Cardápio':'https://link-do-seu-cardapio.com','Pix':'https://link-de-pagamento-pix.com','Link personalizado':'https://'};
 function phDest(){var i=$('f4');if(i)i.placeholder=PH[$('f3').value]||'https://';var g=$('gconv');if(g)g.style.display=$('f3').value==='Google Avaliações'?'block':'none'}
 async function cvGoogle(){var i=$('f4'),m=$('gmsg');m.textContent='Convertendo…';try{var r=await api('/resellers/google-avaliacao',{method:'POST',body:JSON.stringify({url:i.value.trim()})});i.value=r.link;m.textContent='✓ Link de avaliação pronto'+(r.nome?' ('+r.nome+')':'')+'. Clique em Salvar.'}catch(e){m.textContent=e.message}}
 function vPlaca(){var p=getPl(selPl);if(!p){cur='placas';return vPlacas()}
