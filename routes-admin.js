@@ -550,6 +550,8 @@ router.get('/price-tiers', (req, res) => {
 });
 
 router.post('/price-tiers', (req, res) => {
+  const promo = require('./promocao.js').get();
+  if (promo && promo.estado === 'ativa') return res.status(409).json({ error: `A promoção "${promo.nome}" está ativa e controla a tabela de preços. Mude os preços dela (menu Promoção) ou encerre a promoção antes de editar a tabela normal.` });
   const { tiers } = req.body || {};
   if (!Array.isArray(tiers) || !tiers.length) return res.status(400).json({ error: 'Tabela inválida.' });
   const valid = tiers.every(t =>

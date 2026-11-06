@@ -67,6 +67,8 @@ app.use('/', require('./catalogo.js')); // catálogo de produtos (LP + checkout 
 app.use('/', require('./declaracao-conteudo.js')); // declaração de conteúdo em PDF (página /admin/declaracao + API)
 app.use('/', require('./exportar-placas.js'));
 app.use('/', require('./estoque-qr.js')); // estoque de QR pré-numerados: /api/admin/qr-estoque // exportação das últimas placas vendidas (ZIP para o fornecedor)
+const promocao = require('./promocao.js');
+app.use('/', promocao); // promoção por período (Black NexTap): troca e devolve a tabela de preços sozinha
 const seoPaginas = require('./seo-paginas.js');
 app.use('/', seoPaginas); // páginas de entrada para Google/IA: fornecedor, como funciona, revenda + /llms.txt
 app.use('/', require('./cardapio.js')); // cardápio inteligente em vídeo: /c/:slug público + admin

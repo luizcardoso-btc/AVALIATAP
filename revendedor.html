@@ -54,6 +54,7 @@ main{padding:24px;min-width:0}.top{display:flex;justify-content:space-between;ga
 @media(max-width:860px){.aw{grid-template-columns:1fr}.ah{padding:18px 20px 22px;gap:12px}.aph{display:none}.alg{height:64px}.ahc h1{font-size:30px}.ahc p{margin-bottom:14px;font-size:15px}.ahc ul{gap:8px}.ahc li{font-size:14px}.af{padding:18px 16px 30px;align-items:start}.af .box{padding:22px}}
 @media(max-width:800px){#app{grid-template-columns:1fr}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;align-items:center}aside .logo{flex:none;padding:0 8px 0 0!important}.lg{height:44px}aside small,.me{display:none}aside a{white-space:nowrap}.g2{grid-template-columns:1fr}}
 </style></head><body>
+<div id="bf"></div>
 
 <div id="auth"><div class="aw">
 <section class="ah">
@@ -486,4 +487,15 @@ at(RESET_TOKEN?'r':initialTab==='login'?'e':'c');
 var RET=qs.get('pedido');
 (function(){var t=RESET_TOKEN?null:readToken();
 if(t){TOKEN=t;boot().then(function(){if(RET){nav('pedidos');api('/payments/orders/'+RET+'/status').then(function(o){return Promise.all([loadOrders(),loadPlates()]).then(function(){draw();toast(o.status==='pago'?'Pagamento aprovado! Suas placas já estão no estoque ✓':'Recebemos seu retorno. Assim que o pagamento for confirmado o pedido muda para Pago.')})}).catch(function(){});try{history.replaceState(null,'',location.pathname)}catch(e){}}}).catch(function(){out()})}})();
-</script><script src="/catalogo-front.js"></script></body></html>
+</script><script src="/catalogo-front.js"></script><script>
+(function(){var el=document.getElementById('bf');if(!el)return;
+function R(n){return 'R$ '+Number(n).toFixed(2).replace('.',',')}
+fetch('/api/public/promocao').then(function(r){return r.json()}).then(function(p){
+ if(!p||!p.ativa)return;var fim=Date.parse(p.fim);
+ el.style.cssText='background:#000;color:#fff;text-align:center;padding:10px 14px;font:600 14px Inter,system-ui,sans-serif;line-height:1.4;border-bottom:2px solid #22c55e';
+ function t(){var s=Math.max(0,Math.floor((fim-Date.now())/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60;
+  var c=(d?d+'d ':'')+('0'+h).slice(-2)+'h '+('0'+m).slice(-2)+'m '+('0'+x).slice(-2)+'s';
+  el.innerHTML='🖤 <b>'+p.nome.toUpperCase()+'</b> · placas a partir de <b style="color:#22c55e">'+R(p.a_partir)+'</b> ('+p.minimo_a_partir+'+ placas)'+(p.de?' · <s style="opacity:.6">'+R(p.de)+'</s>':'')+' · termina em <b>'+c+'</b>';}
+ t();setInterval(t,1000)}).catch(function(){})})();
+</script>
+</body></html>

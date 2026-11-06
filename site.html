@@ -63,6 +63,7 @@ footer{border-top:1px solid var(--br);padding:30px 0;font-size:13px;color:var(--
 @media(max-width:800px){.hero,.price,.plate{grid-template-columns:1fr}.plate{gap:14px;text-align:center}.plate .grid{text-align:left}.plate .float{order:-1}.nav{height:70px;gap:12px}.logo img{height:52px}.nav nav{display:none}.stats{grid-template-columns:1fr}.nav .btn{padding:9px 12px}}
 @media(max-width:420px){.nav .btn:not(.p){display:none}}
 </style></head><body>
+<div id="bf"></div>
 <header><div class="w nav">
 <a class="logo" href="#top"><img src="/logo.png" alt="NexTap"></a>
 <nav><a href="#placa">A placa</a><a href="#precos">Preços</a><a href="#faq">FAQ</a></nav>
@@ -209,4 +210,15 @@ var MIN_PLACAS=5000, MIN_REVS=250;
 })();
 </script>
 <script src="/catalogo-front.js"></script>
+<script>
+(function(){var el=document.getElementById('bf');if(!el)return;
+function R(n){return 'R$ '+Number(n).toFixed(2).replace('.',',')}
+fetch('/api/public/promocao').then(function(r){return r.json()}).then(function(p){
+ if(!p||!p.ativa)return;var fim=Date.parse(p.fim);
+ el.style.cssText='background:#000;color:#fff;text-align:center;padding:10px 14px;font:600 14px Inter,system-ui,sans-serif;line-height:1.4;border-bottom:2px solid #22c55e';
+ function t(){var s=Math.max(0,Math.floor((fim-Date.now())/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60;
+  var c=(d?d+'d ':'')+('0'+h).slice(-2)+'h '+('0'+m).slice(-2)+'m '+('0'+x).slice(-2)+'s';
+  el.innerHTML='🖤 <b>'+p.nome.toUpperCase()+'</b> · placas a partir de <b style="color:#22c55e">'+R(p.a_partir)+'</b> ('+p.minimo_a_partir+'+ placas)'+(p.de?' · <s style="opacity:.6">'+R(p.de)+'</s>':'')+' · termina em <b>'+c+'</b>';}
+ t();setInterval(t,1000)}).catch(function(){})})();
+</script>
 </body></html>
