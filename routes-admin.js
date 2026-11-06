@@ -524,19 +524,28 @@ router.post('/placas/renumerar', (req, res) => {
       if (!usarEstoque) return erros.push(`O código ${x.para} (novo da placa ${x.de}) está no estoque de QR. Para usar essa placa do estoque, marque "Trocar por placas do estoque".`);
       const q = livres.get(x.para); if (!q) return erros.push(`O código ${x.para} não está livre no estoque de QR.`);
       const pl = db.prepare('SELECT id, color, status, code FROM plates WHERE id = ?').get(x.id);
-      if (String(pl.color) !== String(q.cor)) return erros.push(`Modelo diferente: a placa ${x.de} é "${pl.color}" e o ${x.para} do estoque é "${q.cor}".`);
-      x.estoque = q; x.codigo_antigo = pl.code;
+      if (String(pl.color) !== String(q.cor)) {
+        if (b.modelo !== true) return erros.push(`Modelo diferente: a placa ${x.de} é "${pl.color}" e o ${x.para} do estoque é "${q.cor}". Para trocar o modelo junto, marque "Permitir trocar o modelo".`);
+        avisos.push(`A placa ${x.de} muda de "${pl.color}" para "${q.cor}": o estoque de "${pl.color}" ganha 1 e o de "${q.cor}" perde 1.`);
+      }
+      x.estoque = q; x.codigo_antigo = pl.code; x.cor_antiga = pl.color;
       if (pl.status === 'ativa') avisos.push(`A placa ${x.de} já está configurada: o QR/NFC antigo dela deixará de funcionar. Só continue se a placa física antiga não foi entregue.`);
-      if (!db.prepare('SELECT 1 FROM qr_estoque WHERE plate_id = ?').get(x.id)) avisos.push(`A placa ${x.de} não estava no estoque de QR; o QR antigo dela não volta ao estoque.`);
+      if (!db.prepare('SELECT 1 FROM qr_estoque WHERE plate_id = ?').get(x.id)) avisos.push(`A placa ${x.de} é anterior ao estoque de QR: ela será cadastrada no estoque como livre (${pl.color}).`);
     }
   });
   const alvo = itens.filter(x => x.de !== x.para);
   if (erros.length || b.aplicar !== true) return res.json({ ok: !erros.length, aplicado: false, total: alvo.length, erros: erros.slice(0, 50), avisos: avisos.slice(0, 20), itens: alvo.slice(0, 50).map(x => ({ de: x.de, para: x.para, estoque: !!x.estoque })) });
+  let loteTroca = null;
   db.transaction(() => {
     alvo.filter(x => x.estoque).forEach(x => { // troca pelo QR do estoque: devolve o QR antigo e passa a usar o novo (número + link)
-      db.prepare("UPDATE qr_estoque SET status = 'livre', plate_id = NULL, usado_em = NULL WHERE plate_id = ?").run(x.id);
+      const velho = db.prepare('SELECT tracking_code, code, color FROM plates WHERE id = ?').get(x.id);
+      const devolvida = db.prepare("UPDATE qr_estoque SET status = 'livre', plate_id = NULL, usado_em = NULL WHERE plate_id = ?").run(x.id).changes;
+      if (!devolvida && velho.tracking_code && !db.prepare('SELECT 1 FROM qr_estoque WHERE numero = ? OR code = ?').get(velho.tracking_code, velho.code)) { // placa antiga (anterior ao estoque): entra no estoque como livre
+        if (!loteTroca) loteTroca = Number(db.prepare("INSERT INTO qr_lotes (qtd_azul, qtd_preta, origem, observacao) VALUES (0, 0, 'troca', 'Placas devolvidas por troca')").run().lastInsertRowid);
+        db.prepare("INSERT INTO qr_estoque (numero, code, cor, lote_id, status) VALUES (?, ?, ?, ?, 'livre')").run(velho.tracking_code, velho.code, velho.color, loteTroca);
+      }
       db.prepare("UPDATE qr_estoque SET status = 'usada', plate_id = ?, usado_em = datetime('now') WHERE id = ?").run(x.id, x.estoque.id);
-      db.prepare('UPDATE plates SET tracking_code = ?, code = ? WHERE id = ?').run(x.para, x.estoque.code, x.id);
+      db.prepare('UPDATE plates SET tracking_code = ?, code = ?, color = ? WHERE id = ?').run(x.para, x.estoque.code, x.estoque.cor, x.id);
     });
     alvo.splice(0, alvo.length, ...alvo.filter(x => !x.estoque));
     alvo.forEach(x => { // passo 1: libera os números (trocas entre placas não colidem)
