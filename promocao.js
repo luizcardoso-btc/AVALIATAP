@@ -41,7 +41,7 @@ setInterval(() => { try { tick(); } catch (e) { console.error('[PROMO]', e.messa
 router.get('/api/public/promocao', (req, res) => {
   const p = tick(); res.set('Cache-Control', 'public, max-age=30');
   if (!p || p.estado !== 'ativa') return res.json({ ativa: false });
-  res.json({ ativa: true, nome: p.nome, fim: p.fim, de: p.normais && p.normais[0] ? p.normais[0].unit_price : null, a_partir: Math.min(...p.tiers.map(t => t.unit_price)), minimo_a_partir: p.tiers.reduce((a, t) => t.unit_price < a.unit_price ? t : a).min_qty });
+  res.json({ ativa: true, nome: p.nome, ini: p.ini, fim: p.fim, normais: p.normais || [], de: p.normais && p.normais[0] ? p.normais[0].unit_price : null, a_partir: Math.min(...p.tiers.map(t => t.unit_price)), minimo_a_partir: p.tiers.reduce((a, t) => t.unit_price < a.unit_price ? t : a).min_qty });
 });
 
 const A = express.Router(); A.use('/api/admin/promocao', requireAdmin);

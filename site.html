@@ -62,8 +62,35 @@ footer{border-top:1px solid var(--br);padding:30px 0;font-size:13px;color:var(--
 @media(prefers-reduced-motion:reduce){.float img,.float:after{animation:none}}
 @media(max-width:800px){.hero,.price,.plate{grid-template-columns:1fr}.plate{gap:14px;text-align:center}.plate .grid{text-align:left}.plate .float{order:-1}.nav{height:70px;gap:12px}.logo img{height:52px}.nav nav{display:none}.stats{grid-template-columns:1fr}.nav .btn{padding:9px 12px}}
 @media(max-width:420px){.nav .btn:not(.p){display:none}}
+.hero{padding-left:20px;padding-right:20px}
+/* ===== Black Friday (liga sozinho quando há promoção ativa) ===== */
+body.bf{--bg:#050505;--soft:#0f0f0f;--card:#0c0c0c;--tx:#fff;--mut:#a1a1aa;--br:#262626;--pr:#facc15;--pr2:#facc15;--grad:linear-gradient(135deg,#facc15,#f59e0b)}
+body.bf header{background:#000;border-bottom:1px solid #1f1f1f}
+body.bf .btn{background:#111;color:#fff;border-color:#2a2a2a}
+body.bf .btn.p{background:linear-gradient(135deg,#facc15,#f59e0b);color:#000;box-shadow:0 8px 28px #facc1555;font-weight:800}
+body.bf .tag{background:#facc15;color:#000}
+body.bf .hero{position:relative}
+body.bf .hero:before{content:"";position:absolute;inset:-40px -20px;z-index:-1;background:radial-gradient(60% 60% at 75% 40%,#22c55e33,transparent 70%),radial-gradient(50% 50% at 10% 10%,#facc1522,transparent 70%)}
+body.bf h1{font-size:clamp(32px,5.4vw,58px);font-weight:900;letter-spacing:-.02em}
+body.bf .y{color:#facc15}
+body.bf .stats b,body.bf .grad-tx{background:linear-gradient(135deg,#facc15,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.bf section.s{background:#0a0a0a}
+body.bf .card,body.bf details{background:#0c0c0c;border-color:#222}
+body.bf .tiers div{background:#0c0c0c;border-color:#222;align-items:center}
+body.bf .tiers .best{border:2px solid #facc15;background:linear-gradient(135deg,#facc1514,#0c0c0c);box-shadow:0 0 30px #facc1526}
+body.bf .tiers .pr b{color:#facc15;font-size:20px}
+body.bf .tiers s{color:#71717a;font-size:13px;margin-right:8px}
+body.bf .prod{position:relative}
+body.bf .prod img{box-shadow:0 30px 80px -20px #facc1566;border:1px solid #2a2a2a}
+.badge{display:none}body.bf .badge{display:grid;position:absolute;top:-14px;right:6%;width:112px;height:112px;border-radius:50%;background:#facc15;color:#000;place-items:center;text-align:center;font-weight:900;line-height:1;transform:rotate(12deg);box-shadow:0 10px 30px #000a;z-index:2}
+.badge small{display:block;font-size:12px;letter-spacing:.08em}.badge b{font-size:34px}
+.cd{display:none}body.bf .cd{display:flex;gap:10px;margin:16px 0 4px}
+.cd div{background:#111;border:1px solid #2a2a2a;border-radius:12px;min-width:68px;padding:10px 6px;text-align:center}.cd b{display:block;font-size:28px;color:#facc15;font-variant-numeric:tabular-nums}.cd small{color:#a1a1aa;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.mq{display:none}body.bf .mq{display:block;overflow:hidden;white-space:nowrap;background:#facc15;color:#000;font-weight:900;letter-spacing:.12em;font-size:13px;padding:7px 0}
+.mq span{display:inline-block;padding-left:100%;animation:mq 22s linear infinite}@keyframes mq{to{transform:translateX(-100%)}}
+body.bf #precos .c h2{font-weight:900}
+.pk button.on{border-color:#facc15}body.bf .pk button.on{border-color:#facc15;background:#facc1514}
 </style></head><body>
-<div id="bf"></div>
 <header><div class="w nav">
 <a class="logo" href="#top"><img src="/logo.png" alt="NexTap"></a>
 <nav><a href="#placa">A placa</a><a href="#precos">Preços</a><a href="#faq">FAQ</a></nav>
@@ -135,7 +162,7 @@ function theme(){var r=document.documentElement,d=r.dataset.theme==='dark'||(!r.
 
 function renderTiers(){
 document.getElementById('tiers').innerHTML=TIERS.map(function(t,i){var last=i===TIERS.length-1;return '<div class="'+(last?'best':'')+'"><span>'+tl(t)+(last?' <span class="tag">MELHOR PREÇO</span>':'')+'</span><b>'+R(t[2])+'</b></div>'}).join('');
-document.getElementById('tagLow').textContent='ATACADO · A PARTIR DE '+R(TIERS[TIERS.length-1][2])+' POR PLACA';
+if(!window.__BF)document.getElementById('tagLow').textContent='ATACADO · A PARTIR DE '+R(TIERS[TIERS.length-1][2])+' POR PLACA';
 document.getElementById('freteNota').textContent='Valor por placa, conforme a quantidade. Frete à parte, calculado pelo CEP.';
 document.getElementById('faqMin').textContent='Sim. O pedido mínimo é de '+MINQ+' placas (azuis, pretas ou as duas juntas), feito direto no seu painel.'}
 renderTiers();
@@ -211,14 +238,31 @@ var MIN_PLACAS=5000, MIN_REVS=250;
 </script>
 <script src="/catalogo-front.js"></script>
 <script>
-(function(){var el=document.getElementById('bf');if(!el)return;
+(function(){
 function R(n){return 'R$ '+Number(n).toFixed(2).replace('.',',')}
 fetch('/api/public/promocao').then(function(r){return r.json()}).then(function(p){
- if(!p||!p.ativa)return;var fim=Date.parse(p.fim);
- el.style.cssText='background:#000;color:#fff;text-align:center;padding:10px 14px;font:600 14px Inter,system-ui,sans-serif;line-height:1.4;border-bottom:2px solid #22c55e';
+ if(!p||!p.ativa||!p.a_partir)return;
+ window.__BF=1;document.body.classList.add('bf');
+ var fim=Date.parse(p.fim),ini=p.ini?new Date(p.ini):null,nome=p.nome||'Black NexTap';
+ function dm(d){return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)}
+ var pct=p.de?Math.round((1-p.a_partir/p.de)*100):0;
+ var txtMq=nome.toUpperCase()+' ★ PLACAS A PARTIR DE '+R(p.a_partir)+' ★ ATÉ '+dm(new Date(fim))+' ★ ';
+ var mq=document.createElement('div');mq.className='mq';mq.innerHTML='<span></span>';mq.firstChild.textContent=txtMq+txtMq+txtMq;document.body.insertBefore(mq,document.body.firstChild);
+ var tag=document.getElementById('tagLow'),h1=document.querySelector('.hero h1');
+ function hero(){tag.textContent='🖤 '+nome.toUpperCase()+' · '+(ini?'DE '+dm(ini)+' ':'')+'ATÉ '+dm(new Date(fim));
+  h1.innerHTML='Black Friday <span class="y">NexTap</span>: placas NFC a partir de <span class="y">'+R(p.a_partir)+'</span>.';}
+ hero();setTimeout(hero,600);setTimeout(hero,1800);
+ var cd=document.createElement('div');cd.className='cd';h1.parentNode.insertBefore(cd,h1.nextSibling.nextSibling);
  function t(){var s=Math.max(0,Math.floor((fim-Date.now())/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60;
-  var c=(d?d+'d ':'')+('0'+h).slice(-2)+'h '+('0'+m).slice(-2)+'m '+('0'+x).slice(-2)+'s';
-  el.innerHTML='🖤 <b>'+p.nome.toUpperCase()+'</b> · placas a partir de <b style="color:#22c55e">'+R(p.a_partir)+'</b> ('+p.minimo_a_partir+'+ placas)'+(p.de?' · <s style="opacity:.6">'+R(p.de)+'</s>':'')+' · termina em <b>'+c+'</b>';}
- t();setInterval(t,1000)}).catch(function(){})})();
+  function b(v,l){return '<div><b>'+('0'+v).slice(-2)+'</b><small>'+l+'</small></div>'}cd.innerHTML=b(d,'dias')+b(h,'horas')+b(m,'min')+b(x,'seg');}
+ t();setInterval(t,1000);
+ if(pct>0){var pr=document.querySelector('.prod'),bd=document.createElement('div');bd.className='badge';bd.innerHTML='<div><small>ATÉ</small><b>-'+pct+'%</b><small>OFF</small></div>';pr.appendChild(bd);}
+ var nor=p.normais||[];
+ function aug(){document.querySelectorAll('#tiers > div').forEach(function(d){if(d.dataset.a)return;var sp=d.children[1];var m=d.children[0].textContent.match(/^(\d+)/);if(!m||!sp)return;
+  var q=+m[1],n=nor.filter(function(x){return x.min_qty<=q&&x.max_qty>=q})[0];if(n){var v=sp.textContent;sp.className='pr';sp.innerHTML='<s>'+R(n.unit_price)+'</s><b></b>';sp.querySelector('b').textContent=v;}d.dataset.a=1;})}
+ new MutationObserver(aug).observe(document.getElementById('tiers'),{childList:true});aug();
+ var pt=document.querySelector('#precos .tag');if(pt)pt.textContent=nome.toUpperCase()+' · PREÇOS ESPECIAIS';
+}).catch(function(){});
+})();
 </script>
 </body></html>
