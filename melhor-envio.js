@@ -230,8 +230,30 @@ async function comprar(id, servico, docDest, nomeServ, opts = {}) {
 async function concluir(id) {
   const o = pedido(id); if (!o || !o.me_id) throw Object.assign(new Error('Este pedido não tem etiqueta no carrinho.'), { status: 409 });
   let preco = NaN;
-  if (o.me_status === 'carrinho') { const c = await api('POST', '/shipment/checkout', { orders: [o.me_id] }); preco = num(c.purchase && c.purchase.price); }
+  if (o.me_status === 'carrinho') {
+    try { const c = await api('POST', '/shipment/checkout', { orders: [o.me_id] }); preco = num(c.purchase && c.purchase.price); }
+    catch (e) {
+      if (/j[aá] foram pagas|inv[aá]lidas|n[aã]o encontrad/i.test(e.message)) e.message = 'A etiqueta antiga deste pedido venceu ou já foi paga no Melhor Envio. Use "Descartar e cotar de novo" para ver o estado dela e emitir uma nova.';
+      throw e;
+    }
+  }
   return finalizar(o.id, o.me_id, o.me_servico_id, null, preco);
+}
+// Descarta uma etiqueta vencida/inválida do carrinho e libera o pedido para cotar e comprar outra.
+// Antes confere no Melhor Envio: se ela já foi paga, não descarta — só finaliza (gera) e traz o rastreio.
+async function descartar(id) {
+  const o = pedido(id); if (!o || !o.me_id) throw Object.assign(new Error('Este pedido não tem etiqueta do Melhor Envio.'), { status: 409 });
+  if (o.me_status === 'gerada') throw Object.assign(new Error('A etiqueta deste pedido já foi gerada; não dá para descartar. Use "Atualizar rastreio".'), { status: 409 });
+  let st = null;
+  try { const r = await api('GET', '/orders/' + o.me_id); st = String((r && r.status) || '').toLowerCase(); } catch { st = null; } // 404 = não existe mais
+  if (['released', 'paid', 'generated', 'posted', 'delivered'].includes(st)) {
+    const f = await finalizar(o.id, o.me_id, o.me_servico_id, null, NaN);
+    return { ...f, recuperada: true };
+  }
+  try { await api('DELETE', '/cart/' + o.me_id); } catch { /* já vencida ou removida */ }
+  db.prepare("UPDATE orders SET me_id=NULL, me_status=NULL, me_erro=NULL, me_etiqueta_url=NULL, me_rastreio=NULL, me_tent=0, custo_frete_real=CASE WHEN me_status='comprada' THEN custo_frete_real ELSE NULL END WHERE id=?").run(id);
+  pedidos.registrarEvento({ origem: 'admin', order_id: id, resultado: 'etiqueta_descartada', detalhe: `Melhor Envio ${o.me_id} (${st || 'inexistente'})` });
+  return { ok: true, recuperada: false };
 }
 const nome = (carrinho, compra) => (carrinho && carrinho.service && carrinho.service.name) || (carrinho && carrinho.service_name) || null;
 async function finalizar(id, meId, servicoId, servicoNome, preco) {
@@ -302,6 +324,9 @@ router.post('/api/admin/orders/:id/melhor-envio/concluir', requireAdmin, async (
   try { await concluir(Number(req.params.id)); res.json({ ok: true, ...(await respostaPedido(Number(req.params.id))) }); } catch (e) { erro(res, e); }
 });
 const respostaPedido = async id => { const o = pedido(id); return { etiqueta_url: o && o.me_etiqueta_url, codigo: o && o.me_rastreio, order: pedidos.decorar(db.prepare('SELECT * FROM orders WHERE id=?').get(id)) }; };
+router.post('/api/admin/orders/:id/melhor-envio/descartar', requireAdmin, async (req, res) => {
+  try { const r = await descartar(Number(req.params.id)); res.json({ ok: true, recuperada: !!r.recuperada, ...(await respostaPedido(Number(req.params.id))) }); } catch (e) { erro(res, e); }
+});
 router.post('/api/admin/orders/:id/melhor-envio/rastrear', requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id), r = await rastrear(id);
@@ -357,6 +382,6 @@ async function tentarPendentes() {
 setTimeout(() => tentarPendentes().catch(() => {}), 60 * 1000).unref();
 setInterval(() => tentarPendentes().catch(() => {}), 5 * 60 * 1000).unref();
 router.autoComprar = autoComprar; router.tentarPendentes = tentarPendentes;
-router._t = { remetente, faltaRemetente, cotarRaw };
+router._t = { remetente, faltaRemetente, cotarRaw, descartar, concluir };
 router.cotarRaw = cotarRaw; // usado nos testes
 module.exports = router;
