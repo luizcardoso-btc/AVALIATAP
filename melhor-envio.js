@@ -88,7 +88,7 @@ function precoUnit(qtd) {
 
 // ---------- cotação ----------
 // Devolve os serviços disponíveis para um CEP e uma quantidade de placas (preço do Melhor Envio, já somando todas as caixas).
-async function cotarRaw(cepDest, qtd, valorUnit) {
+async function cotarRaw(cepDest, qtd, valorUnit, opt = {}) {
   const rem = remetente(); if (rem.postal_code.length !== 8) throw Object.assign(new Error('Preencha o CEP do remetente em Melhor Envio > Configurar (ou em Declaração).'), { status: 400 });
   const np = pacotesDe(qtd), pq = pacoteQtd(qtd), c = embalagem();
   const seguro = c.me_seguro === '1' ? Math.max(1, +(valorUnit * Math.ceil(qtd / np)).toFixed(2)) : 0;
@@ -96,18 +96,22 @@ async function cotarRaw(cepDest, qtd, valorUnit) {
     from: { postal_code: rem.postal_code }, to: { postal_code: cepDest },
     products: [{ id: 'pedido', width: pq.width, height: pq.height, length: pq.length, weight: pq.weight, insurance_value: seguro, quantity: 1 }],
   });
-  const opcoes = (Array.isArray(j) ? j : []).map(s => ({
+  const todas = (Array.isArray(j) ? j : []).map(s => ({
     id: s.id, nome: s.name, empresa: s.company && s.company.name, erro: s.error || null,
     preco: +(num(s.custom_price ?? s.price) * np).toFixed(2), prazo: s.custom_delivery_time ?? s.delivery_time, precisa_agencia: /latam|azul|buslog/i.test((s.company && s.company.name) || ''),
-  })).filter(s => !s.erro && Number.isFinite(s.preco) && s.preco > 0 && !s.precisa_agencia
-    && /correios/i.test(s.empresa || '') && /^(pac|sedex)$/i.test(String(s.nome || '').trim())) // só Correios: PAC e SEDEX
+  }));
+  const ehJT = s => /j\s*&\s*t|jt\s*express/i.test(s.empresa || '');
+  const valida = s => !s.erro && Number.isFinite(s.preco) && s.preco > 0 && !s.precisa_agencia;
+  // Checkout do cliente: só Correios PAC/SEDEX. Cotação do admin (opt.jt): também a J&T Express, qualquer serviço dela.
+  const opcoes = todas.filter(s => valida(s) && ((/correios/i.test(s.empresa || '') && /^(pac|sedex)$/i.test(String(s.nome || '').trim())) || (opt.jt && ehJT(s))))
     .sort((a, b) => a.preco - b.preco);
+  if (opt.jt) return { pacote: pq, pacotes: np, opcoes, jt_disponivel: todas.some(s => ehJT(s) && valida(s)), jt_erros: todas.filter(s => ehJT(s) && s.erro).map(s => s.erro).slice(0, 2), empresas_cotadas: [...new Set(todas.filter(valida).map(s => s.empresa).filter(Boolean))] };
   return { pacote: pq, pacotes: np, opcoes };
 }
 async function cotar(id) {
   const o = pedido(id); if (!o) throw Object.assign(new Error('Pedido não encontrado.'), { status: 404 });
   if (o.dest.postal_code.length !== 8) throw Object.assign(new Error('O pedido não tem CEP de entrega válido.'), { status: 400 });
-  const r = await cotarRaw(o.dest.postal_code, o.qtd, o.unit_price);
+  const r = await cotarRaw(o.dest.postal_code, o.qtd, o.unit_price, { jt: true });
   return { ...r, remetente_falta: faltaRemetente(remetente()), valor_cobrado: o.shipping_fee || 0, servico_pedido: o.me_servico_id || null, servico_pedido_nome: o.shipping_service || null };
 }
 
@@ -354,4 +358,5 @@ setTimeout(() => tentarPendentes().catch(() => {}), 60 * 1000).unref();
 setInterval(() => tentarPendentes().catch(() => {}), 5 * 60 * 1000).unref();
 router.autoComprar = autoComprar; router.tentarPendentes = tentarPendentes;
 router._t = { remetente, faltaRemetente, cotarRaw };
+router.cotarRaw = cotarRaw; // usado nos testes
 module.exports = router;
