@@ -88,20 +88,31 @@ function despesasDoPeriodo(j, primeiraData) {
 // ---------- o cálculo principal ----------
 function lucro(periodo) {
   const j = janela(periodo), cfg = configuracao(), est = estoque();
-  const pedidos = db.prepare(`SELECT * FROM orders WHERE status IN ${PAGOS} AND a_receber = 0
-      AND COALESCE(paid_at, created_at) <= ? ${j.ini ? 'AND COALESCE(paid_at, created_at) >= ?' : ''} ORDER BY id`).all(...(j.ini ? [j.fim, j.ini] : [j.fim]));
+  // Cada recebimento é um "evento" na data em que o dinheiro entrou: pedidos pagos de uma vez (data do pagamento) e partes recebidas de pedidos "a receber".
+  const paraEv = db.prepare(`SELECT * FROM orders WHERE status IN ${PAGOS}`).all();
+  const parcPor = {};
+  for (const p of db.prepare('SELECT order_id, valor, data FROM order_recebimentos ORDER BY data, id').all()) (parcPor[p.order_id] = parcPor[p.order_id] || []).push(p);
+  const eventos = [];
+  for (const o of paraEv) {
+    const ps = parcPor[o.id];
+    if (ps) ps.forEach(p => eventos.push({ o, f: o.total > 0 ? Math.min(1, p.valor / o.total) : 1, dt: p.data }));
+    else if (!o.a_receber) eventos.push({ o, f: 1, dt: o.paid_at || o.created_at });
+  }
+  const evs = eventos.filter(e => e.dt <= j.fim && (!j.ini || e.dt >= j.ini)).sort((a, b) => (a.dt < b.dt ? -1 : a.dt > b.dt ? 1 : a.o.id - b.o.id));
+  const pedidos = [...new Map(evs.map(e => [e.o.id, e.o])).values()];
   const T = { pedidos: pedidos.length, placas: 0, receita_placas: 0, frete_cobrado: 0, receita_bruta: 0, custo_placas: 0, icms: 0, taxas_mp: 0, custo_envio: 0,
     taxas_reais: 0, taxas_estimadas: 0, envio_real: 0, envio_estimado: 0, card_valor: 0 };
-  const lista = [];
-  for (const o of pedidos) {
+  const lista = [], vistos = new Set();
+  for (const { o, f } of evs) {
     const c = custosDoPedido(o, cfg);
-    T.placas += c.qty; T.receita_placas += c.recPlacas; T.frete_cobrado += c.frete; T.receita_bruta += o.total; T.custo_placas += c.custoPlacas;
-    T.icms += c.icms; T.taxas_mp += c.taxa; T.custo_envio += c.envio;
-    c.taxaReal ? T.taxas_reais++ : T.taxas_estimadas++; c.envioReal ? T.envio_real++ : T.envio_estimado++;
-    if (o.payment_method === 'credit_card') T.card_valor += o.total;
-    lista.push({ id: o.id, total: o.total, qty: c.qty, frete_cobrado: c.frete, custo_envio: r2(c.envio), envio_real: c.envioReal, lucro: r2(c.lucro) });
+    T.placas += c.qty * f; T.receita_placas += c.recPlacas * f; T.frete_cobrado += c.frete * f; T.receita_bruta += o.total * f; T.custo_placas += c.custoPlacas * f;
+    T.icms += c.icms * f; T.taxas_mp += c.taxa * f; T.custo_envio += c.envio * f;
+    if (!vistos.has(o.id)) { vistos.add(o.id); c.taxaReal ? T.taxas_reais++ : T.taxas_estimadas++; c.envioReal ? T.envio_real++ : T.envio_estimado++; }
+    if (o.payment_method === 'credit_card') T.card_valor += o.total * f;
+    lista.push({ id: o.id, total: r2(o.total * f), qty: c.qty, frete_cobrado: c.frete, custo_envio: r2(c.envio * f), envio_real: c.envioReal, lucro: r2(c.lucro * f) });
   }
-  const primeira = pedidos.length ? new Date(String(pedidos[0].paid_at || pedidos[0].created_at).replace(' ', 'T') + 'Z').toISOString().slice(0, 10) : null;
+  T.placas = Math.round(T.placas);
+  const primeira = evs.length ? new Date(String(evs[0].dt).replace(' ', 'T') + 'Z').toISOString().slice(0, 10) : null;
   const desp = despesasDoPeriodo(j, primeira);
   const lucroBruto = T.receita_bruta - T.custo_placas - T.icms - T.taxas_mp - T.custo_envio;
   const final = lucroBruto - desp.total;
@@ -109,7 +120,9 @@ function lucro(periodo) {
   // a receber (pedidos aguardando pagamento) — quanto sobraria se fossem pagos
   const aw = db.prepare("SELECT * FROM orders WHERE (status='aguardando_pagamento' AND created_at >= datetime('now','-14 days')) OR (a_receber = 1 AND status IN ('pago','em_producao','enviado','entregue'))").all();
   let awLucro = 0, awValor = 0;
-  for (const o of aw) { awValor += o.total; awLucro += custosDoPedido(o, cfg).lucro; }
+  const recebPor = {};
+  for (const p of db.prepare('SELECT order_id, SUM(valor) v FROM order_recebimentos GROUP BY order_id').all()) recebPor[p.order_id] = p.v;
+  for (const o of aw) { const rec = o.a_receber ? (recebPor[o.id] || 0) : 0, resto = o.total > 0 ? Math.max(0, 1 - rec / o.total) : 1; awValor += o.total * resto; awLucro += custosDoPedido(o, cfg).lucro * resto; }
 
   // faixas de preço: quanto sobra em cada faixa (no pedido mínimo da faixa)
   const cardShare = T.receita_bruta ? T.card_valor / T.receita_bruta : 0;

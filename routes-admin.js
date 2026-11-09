@@ -14,11 +14,13 @@ router.use(requireAdmin);
 
 router.get('/overview', (req, res) => {
   const revendedores = db.prepare('SELECT COUNT(*) AS n FROM resellers').get().n;
-  const faturamento = db.prepare("SELECT COALESCE(SUM(total),0) AS s FROM orders WHERE status IN ('pago','em_producao','enviado','entregue') AND a_receber = 0").get().s;
+  const parcRec = db.prepare("SELECT COALESCE(SUM(r.valor),0) AS s FROM order_recebimentos r JOIN orders o ON o.id = r.order_id WHERE o.status IN ('pago','em_producao','enviado','entregue')").get().s;
+  const faturamento = Math.round((db.prepare("SELECT COALESCE(SUM(total),0) AS s FROM orders WHERE status IN ('pago','em_producao','enviado','entregue') AND a_receber = 0 AND id NOT IN (SELECT order_id FROM order_recebimentos)").get().s + parcRec) * 100) / 100;
   const pendentes = db.prepare("SELECT COUNT(*) AS n FROM orders WHERE status='aguardando_pagamento'").get().n;
   const placas = db.prepare('SELECT COUNT(*) AS n FROM plates WHERE order_id IS NOT NULL').get().n;
   const ativas = db.prepare("SELECT COUNT(*) AS n FROM plates WHERE status='ativa'").get().n;
-  const aReceber = db.prepare("SELECT COALESCE(SUM(total),0) AS s FROM orders WHERE status='aguardando_pagamento' OR (a_receber = 1 AND status IN ('pago','em_producao','enviado','entregue'))").get().s;
+  const aReceber = Math.round((db.prepare("SELECT COALESCE(SUM(total),0) AS s FROM orders WHERE status='aguardando_pagamento' OR (a_receber = 1 AND status IN ('pago','em_producao','enviado','entregue'))").get().s
+    - db.prepare("SELECT COALESCE(SUM(r.valor),0) AS s FROM order_recebimentos r JOIN orders o ON o.id = r.order_id WHERE o.a_receber = 1 AND o.status IN ('pago','em_producao','enviado','entregue')").get().s) * 100) / 100;
   const pagos = db.prepare("SELECT COUNT(*) AS n FROM orders WHERE status IN ('pago','em_producao','enviado','entregue') AND a_receber = 0").get().n;
   const freteCobrado = db.prepare("SELECT COALESCE(SUM(shipping_fee),0) AS s FROM orders WHERE status IN ('pago','em_producao','enviado','entregue') AND a_receber = 0").get().s;
   res.json({ revendedores, faturamento, frete_cobrado: freteCobrado, a_receber: aReceber, pendentes, pagos, placas, ativas, persistente: db.meta.persistente });
@@ -191,7 +193,8 @@ router.get('/resellers', (req, res) => {
   const rows = db.prepare(`
     SELECT r.id, r.name, r.email, r.whatsapp, r.addr_city, r.addr_state, r.created_at, r.cortesia,
       (SELECT COUNT(*) FROM orders o WHERE o.reseller_id=r.id) AS pedidos,
-      (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.reseller_id=r.id AND o.a_receber=0 AND o.status IN ('pago','em_producao','enviado','entregue')) AS gasto,
+      ((SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.reseller_id=r.id AND o.a_receber=0 AND o.status IN ('pago','em_producao','enviado','entregue') AND o.id NOT IN (SELECT order_id FROM order_recebimentos))
+       + (SELECT COALESCE(SUM(x.valor),0) FROM order_recebimentos x JOIN orders o ON o.id = x.order_id WHERE o.reseller_id=r.id AND o.status IN ('pago','em_producao','enviado','entregue'))) AS gasto,
       (SELECT COUNT(*) FROM plates p WHERE p.reseller_id=r.id) AS placas,
       (SELECT COUNT(*) FROM sales s WHERE s.reseller_id=r.id) AS vendas
     FROM resellers r ORDER BY r.id DESC
@@ -356,13 +359,56 @@ router.post('/resellers/:id/liberar-placas', (req, res) => {
 });
 
 // Recebi o dinheiro de um pedido "a receber": passa a contar no faturamento e no lucro a partir de hoje.
+// Se já houve recebimentos parciais, registra só o que falta.
+const restante = o => Math.round((o.total - db.prepare('SELECT COALESCE(SUM(valor),0) s FROM order_recebimentos WHERE order_id = ?').get(o.id).s) * 100) / 100;
 router.post('/orders/:id/recebido', (req, res) => {
   const o = pegar(req.params.id);
   if (!o) return res.status(404).json({ error: 'Pedido não encontrado.' });
   if (!o.a_receber) return res.status(409).json({ error: 'Este pedido não está marcado como a receber.' });
-  db.prepare("UPDATE orders SET a_receber = 0, recebido_em = datetime('now'), paid_at = datetime('now') WHERE id = ?").run(o.id);
+  db.transaction(() => {
+    const ja = db.prepare('SELECT COUNT(*) n FROM order_recebimentos WHERE order_id = ?').get(o.id).n;
+    const falta = restante(o);
+    if (ja && falta > 0) db.prepare("INSERT INTO order_recebimentos (order_id, valor, obs) VALUES (?, ?, 'Saldo restante')").run(o.id, falta);
+    db.prepare("UPDATE orders SET a_receber = 0, recebido_em = datetime('now'), paid_at = datetime('now') WHERE id = ?").run(o.id);
+  })();
   pedidos.registrarEvento({ origem: 'admin', order_id: o.id, resultado: 'recebido', detalhe: `R$ ${o.total}` });
   res.json(resposta(o.id));
+});
+// Recebimento PARCIAL: registra quanto entrou e a data; o pedido segue "a receber" pelo restante. Quando o restante zera, vira recebido.
+router.post('/orders/:id/recebimento', (req, res) => {
+  const o = pegar(req.params.id);
+  if (!o) return res.status(404).json({ error: 'Pedido não encontrado.' });
+  if (!o.a_receber) return res.status(409).json({ error: 'Este pedido não está marcado como a receber.' });
+  const b = req.body || {}, falta = restante(o);
+  const valor = lerValor(b.valor);
+  if (valor === false || valor === null || !(valor > 0)) return res.status(400).json({ error: 'Informe o valor recebido, ex.: 150,00.' });
+  if (valor > falta + 0.004) return res.status(400).json({ error: `O valor passa do que falta receber (R$ ${falta.toFixed(2).replace('.', ',')}).` });
+  let data = null;
+  if (b.data) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.data));
+    const d = m && new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    if (!m || d.getUTCMonth() !== +m[2] - 1 || d.getTime() > Date.now() + 864e5) return res.status(400).json({ error: 'Data inválida.' });
+    // hoje (Brasília) usa o horário real; outro dia fica às 12h de Brasília
+    data = b.data === new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) ? null : `${m[1]}-${m[2]}-${m[3]} 15:00:00`;
+  }
+  const obs = String(b.obs || '').replace(/\s+/g, ' ').trim().slice(0, 200) || null;
+  db.transaction(() => {
+    db.prepare("INSERT INTO order_recebimentos (order_id, valor, data, obs) VALUES (?, ?, COALESCE(?, datetime('now')), ?)").run(o.id, Math.round(valor * 100) / 100, data, obs);
+    if (restante(o) <= 0.004) db.prepare("UPDATE orders SET a_receber = 0, recebido_em = datetime('now'), paid_at = datetime('now') WHERE id = ?").run(o.id);
+  })();
+  pedidos.registrarEvento({ origem: 'admin', order_id: o.id, resultado: 'recebimento_parcial', detalhe: `R$ ${valor}${obs ? ' · ' + obs : ''}` });
+  res.json(resposta(o.id));
+});
+// Desfazer um recebimento parcial lançado por engano (se o pedido já estava quitado, volta a ficar "a receber").
+router.delete('/orders/recebimento/:rid', (req, res) => {
+  const r = db.prepare('SELECT * FROM order_recebimentos WHERE id = ?').get(req.params.rid);
+  if (!r) return res.status(404).json({ error: 'Recebimento não encontrado.' });
+  db.transaction(() => {
+    db.prepare('DELETE FROM order_recebimentos WHERE id = ?').run(r.id);
+    db.prepare("UPDATE orders SET a_receber = 1, recebido_em = NULL WHERE id = ?").run(r.order_id);
+  })();
+  pedidos.registrarEvento({ origem: 'admin', order_id: r.order_id, resultado: 'recebimento_desfeito', detalhe: `R$ ${r.valor}` });
+  res.json(resposta(r.order_id));
 });
 // Lançar um orçamento aprovado e já pago como pedido: cria o pedido pago (gera as placas) e coloca em produção.
 router.post('/orcamentos/:id/lancar', (req, res) => {

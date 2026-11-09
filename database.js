@@ -501,6 +501,17 @@ CREATE TABLE IF NOT EXISTS sales (
   `),
   // v28 — despesas com tipo: 'operacional' (padrão, sai do lucro bruto) ou 'ativo' (compra de estoque/equipamento, entra na linha "Receita − ativos"). Só adiciona.
   db => db.exec(`ALTER TABLE despesas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'operacional';`),
+  // v29 — recebimentos parciais de pedidos "a receber": cada parte recebida, com data. Só adiciona.
+  db => db.exec(`
+    CREATE TABLE IF NOT EXISTS order_recebimentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      valor REAL NOT NULL,
+      data TEXT NOT NULL DEFAULT (datetime('now')),
+      obs TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_order_receb ON order_recebimentos(order_id);
+  `),
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
