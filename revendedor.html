@@ -484,7 +484,10 @@ async function svC(){
     ME=await api('/resellers/me');$('un').textContent=ME.name;$('av').textContent=ME.name.charAt(0).toUpperCase();toast('Dados salvos ✓')
   }catch(e){alert(e.message)}}
 function vAcad(){head('NFC Academy','Aprenda a configurar, apresentar e vender suas placas.');var les=lsLes(),done=Object.keys(les).filter(function(k){return les[k]}).length;
-return '<div class="card"><div class="pg"><i style="width:'+Math.round(done/LES.length*100)+'%"></i></div><small class="mut">'+done+' de '+LES.length+' aulas concluídas</small>'+LES.map(function(l,i){return '<div class="qty"><span><b>'+(i+1)+'.</b> '+E(l)+'</span><button class="btn s" onclick="ls('+i+')" style="width:auto;height:auto">'+(les[i]?'✔ Concluída':'Marcar como concluída')+'</button></div>'}).join('')+'</div>'}
+return '<div class="card"><div class="pg"><i style="width:'+Math.round(done/LES.length*100)+'%"></i></div><small class="mut">'+done+' de '+LES.length+' aulas concluídas</small>'+LES.map(function(l,i){var v=LVID[i],ab=acOpen===i;return '<div class="qty"><span><b>'+(i+1)+'.</b> '+E(l)+(v?' <small class="mut">· vídeo</small>':'')+'</span><span style="display:flex;gap:6px;flex-wrap:wrap">'+(v?'<button class="btn s p" onclick="acVid('+i+')" style="width:auto;height:auto">'+(ab?'Fechar vídeo':'▶ Assistir aula')+'</button>':'')+'<button class="btn s" onclick="ls('+i+')" style="width:auto;height:auto">'+(les[i]?'✔ Concluída':'Marcar como concluída')+'</button></span></div>'+(v&&ab?'<div style="margin:6px 0 14px"><video controls playsinline preload="metadata" poster="'+v.poster+'" src="'+v.src+'" style="width:100%;max-height:70vh;border-radius:12px;background:#000" onended="acFim('+i+')"></video><small class="mut">'+E(v.nota)+'</small></div>':'')}).join('')+'</div>'}
+var LVID={0:{src:'/academy/como-ativar-qr.mp4',poster:'/academy/como-ativar-qr.jpg',nota:'Passo a passo de como ativar o QR Code da placa do jeito certo.'}},acOpen=-1;
+function acVid(i){acOpen=acOpen===i?-1:i;draw()}
+function acFim(i){var les=lsLes();if(!les[i]){les[i]=true;svLes(les);toast('Aula concluída ✓')}}
 function ls(i){var les=lsLes();les[i]=!les[i];svLes(les);draw()}
 
 /* ---- boot ---- */
