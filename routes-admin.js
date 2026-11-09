@@ -358,6 +358,28 @@ router.post('/resellers/:id/liberar-placas', (req, res) => {
   res.json(resposta(id));
 });
 
+// Endereço de entrega do pedido (usado na etiqueta). Pode ser corrigido a qualquer momento antes de comprar a etiqueta.
+router.put('/orders/:id/endereco', (req, res) => {
+  const o = pegar(req.params.id);
+  if (!o) return res.status(404).json({ error: 'Pedido não encontrado.' });
+  const b = req.body || {}, t = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+  const cep = String(b.cep || '').replace(/\D/g, ''), uf = t(b.state, 2).toUpperCase();
+  const e = { name: t(b.name, 120), phone: String(b.phone || '').replace(/\D/g, '').slice(0, 13), street: t(b.street, 150), number: t(b.number, 20) || 'S/N',
+    complement: t(b.complement, 80), district: t(b.district, 80), city: t(b.city, 80) };
+  if (cep.length !== 8) return res.status(400).json({ error: 'CEP inválido: informe os 8 números.' });
+  if (!e.street) return res.status(400).json({ error: 'Informe a rua.' });
+  if (!e.district) return res.status(400).json({ error: 'Informe o bairro.' });
+  if (!e.city) return res.status(400).json({ error: 'Informe a cidade.' });
+  if (!/^[A-Z]{2}$/.test(uf)) return res.status(400).json({ error: 'Informe a UF com 2 letras (ex.: CE).' });
+  const doc = String(b.doc || '').replace(/\D/g, '');
+  if (doc && doc.length !== 11 && doc.length !== 14) return res.status(400).json({ error: 'CPF/CNPJ inválido.' });
+  db.prepare(`UPDATE orders SET ship_name = COALESCE(NULLIF(?, ''), ship_name), ship_phone = COALESCE(NULLIF(?, ''), ship_phone), ship_cep = ?, ship_street = ?, ship_number = ?,
+    ship_complement = ?, ship_district = ?, ship_city = ?, ship_state = ?, ship_doc = COALESCE(NULLIF(?, ''), ship_doc),
+    me_erro = CASE WHEN me_erro LIKE '%endere%' OR me_erro LIKE '%CEP%' THEN NULL ELSE me_erro END WHERE id = ?`)
+    .run(e.name, e.phone, cep, e.street, e.number, e.complement, e.district, e.city, uf, doc, o.id);
+  pedidos.registrarEvento({ origem: 'admin', order_id: o.id, resultado: 'endereco_editado', detalhe: `${e.street}, ${e.number} - ${e.city}/${uf} (${cep})` });
+  res.json(resposta(o.id));
+});
 // Recebi o dinheiro de um pedido "a receber": passa a contar no faturamento e no lucro a partir de hoje.
 // Se já houve recebimentos parciais, registra só o que falta.
 const restante = o => Math.round((o.total - db.prepare('SELECT COALESCE(SUM(valor),0) s FROM order_recebimentos WHERE order_id = ?').get(o.id).s) * 100) / 100;
