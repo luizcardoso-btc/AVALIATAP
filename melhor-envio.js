@@ -100,7 +100,7 @@ async function cotarRaw(cepDest, qtd, valorUnit, opt = {}) {
     id: s.id, nome: s.name, empresa: s.company && s.company.name, empresa_id: s.company && s.company.id, erro: s.error || null,
     preco: +(num(s.custom_price ?? s.price) * np).toFixed(2), prazo: s.custom_delivery_time ?? s.delivery_time, precisa_agencia: /latam|azul|buslog/i.test((s.company && s.company.name) || ''),
   }));
-  const ehJT = s => /j\s*&\s*t|jt\s*express/i.test(s.empresa || '');
+  const ehJT = s => /j\s*&\s*t|jt\s*express|^\s*jet\b/i.test(s.empresa || ''); // no Melhor Envio a J&T aparece como "JeT"
   const valida = s => !s.erro && Number.isFinite(s.preco) && s.preco > 0 && !s.precisa_agencia;
   // Checkout do cliente: só Correios PAC/SEDEX. Cotação do admin (opt.jt): também a J&T Express, qualquer serviço dela.
   const opcoes = todas.filter(s => valida(s) && ((/correios/i.test(s.empresa || '') && /^(pac|sedex)$/i.test(String(s.nome || '').trim())) || (opt.jt && ehJT(s))))
