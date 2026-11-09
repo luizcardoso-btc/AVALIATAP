@@ -212,6 +212,31 @@ router.post('/sales', (req, res) => {
   res.json({ id: info.lastInsertRowid });
 });
 
+// Estima o custo das vendas SEM custo: usa o preço da placa vinculada; senão o preço pago na compra mais recente até a data da venda
+// (ou, se a venda é anterior à 1ª compra, a 1ª compra); sem nenhuma compra, o preço atual da tabela (Black enquanto ativa).
+router.post('/sales/estimar-custo', (req, res) => {
+  const compras = db.prepare(`SELECT unit_price, date(COALESCE(paid_at, created_at)) AS d FROM orders WHERE reseller_id = ? AND status IN ('pago','em_producao','enviado','entregue') ORDER BY COALESCE(paid_at, created_at), id`).all(req.resellerId);
+  const tiers = db.prepare('SELECT unit_price FROM price_tiers ORDER BY min_qty').all();
+  const vendas = db.prepare('SELECT s.*, p.cost AS pcost FROM sales s LEFT JOIN plates p ON p.id = s.plate_id WHERE s.reseller_id = ? AND COALESCE(s.cost, 0) = 0').all(req.resellerId);
+  const up = db.prepare('UPDATE sales SET cost = ? WHERE id = ?');
+  const itens = [];
+  db.transaction(() => {
+    for (const v of vendas) {
+      let custo = null, origem = '';
+      if (v.pcost > 0) { custo = v.pcost; origem = 'placa vinculada'; }
+      else {
+        const dia = String(v.created_at).slice(0, 10);
+        const ate = compras.filter(c => c.d <= dia);
+        const c = ate.length ? ate[ate.length - 1] : compras[0];
+        if (c) { custo = c.unit_price; origem = ate.length ? 'compra de ' + c.d : '1ª compra (' + c.d + ')'; }
+        else if (tiers.length) { custo = tiers[0].unit_price; origem = 'preço atual da tabela'; }
+      }
+      if (custo != null) { up.run(custo, v.id); itens.push({ id: v.id, cliente: v.client_name, custo, origem }); }
+    }
+  })();
+  res.json({ atualizadas: itens.length, itens });
+});
+
 // Editar uma venda: cliente, data, valor e custo (o lucro é valor − custo).
 router.put('/sales/:id', (req, res) => {
   const v = db.prepare('SELECT * FROM sales WHERE id = ? AND reseller_id = ?').get(req.params.id, req.resellerId);
@@ -223,6 +248,15 @@ router.put('/sales/:id', (req, res) => {
   if (!nome) return res.status(400).json({ error: 'Informe o cliente.' });
   if (!Number.isFinite(valor) || valor < 0 || valor > 1000000) return res.status(400).json({ error: 'Valor inválido.' });
   if (!Number.isFinite(custo) || custo < 0 || custo > 1000000) return res.status(400).json({ error: 'Custo inválido.' });
+  let plateId = v.plate_id;
+  if (b.plate_id !== undefined) {
+    if (b.plate_id === null || b.plate_id === '' || Number(b.plate_id) === 0) plateId = null;
+    else {
+      const pl = db.prepare('SELECT id FROM plates WHERE id = ? AND reseller_id = ?').get(Number(b.plate_id), req.resellerId);
+      if (!pl) return res.status(404).json({ error: 'Placa não encontrada.' });
+      plateId = pl.id;
+    }
+  }
   let data = v.created_at;
   if (b.date) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.date));
@@ -230,8 +264,8 @@ router.put('/sales/:id', (req, res) => {
     if (!m || d.getUTCMonth() !== +m[2] - 1 || d.getTime() > Date.now() + 864e5) return res.status(400).json({ error: 'Data inválida.' });
     data = `${m[1]}-${m[2]}-${m[3]} 12:00:00`;
   }
-  db.prepare('UPDATE sales SET client_name = ?, value = ?, cost = ?, created_at = ? WHERE id = ?')
-    .run(nome, Math.round(valor * 100) / 100, Math.round(custo * 100) / 100, data, v.id);
+  db.prepare('UPDATE sales SET client_name = ?, value = ?, cost = ?, created_at = ?, plate_id = ? WHERE id = ?')
+    .run(nome, Math.round(valor * 100) / 100, Math.round(custo * 100) / 100, data, plateId, v.id);
   res.json(db.prepare('SELECT * FROM sales WHERE id = ?').get(v.id));
 });
 
