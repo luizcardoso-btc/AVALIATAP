@@ -97,7 +97,7 @@ async function cotarRaw(cepDest, qtd, valorUnit, opt = {}) {
     products: [{ id: 'pedido', width: pq.width, height: pq.height, length: pq.length, weight: pq.weight, insurance_value: seguro, quantity: 1 }],
   });
   const todas = (Array.isArray(j) ? j : []).map(s => ({
-    id: s.id, nome: s.name, empresa: s.company && s.company.name, erro: s.error || null,
+    id: s.id, nome: s.name, empresa: s.company && s.company.name, empresa_id: s.company && s.company.id, erro: s.error || null,
     preco: +(num(s.custom_price ?? s.price) * np).toFixed(2), prazo: s.custom_delivery_time ?? s.delivery_time, precisa_agencia: /latam|azul|buslog/i.test((s.company && s.company.name) || ''),
   }));
   const ehJT = s => /j\s*&\s*t|jt\s*express/i.test(s.empresa || '');
@@ -183,6 +183,7 @@ function aplicarRastreio(id, codigo) {
   return r.changes > 0;
 }
 async function comprar(id, servico, docDest, nomeServ, opts = {}) {
+  const agencia = parseInt(opts.agencia, 10) || null; // ponto de postagem (J&T, Jadlog…)
   const liberar = opts.liberar === false ? 0 : 1;
   const o = pedido(id); if (!o) throw Object.assign(new Error('Pedido não encontrado.'), { status: 404 });
   if (!['pago', 'em_producao'].includes(o.status)) throw Object.assign(new Error('Só dá para comprar etiqueta de pedidos pagos que ainda não foram enviados.'), { status: 409 });
@@ -209,7 +210,7 @@ async function comprar(id, servico, docDest, nomeServ, opts = {}) {
   if (vd) opcoes.insurance_value = vd;
   if (nfe && nfe.chave) opcoes.invoice = { key: dig(nfe.chave) };
   const carrinho = await api('POST', '/cart', {
-    service: servico, from: rem, to: para,
+    service: servico, ...(agencia ? { agency: agencia } : {}), from: rem, to: para,
     products: [{ name: 'Placa NFC/QR de avaliação', quantity: o.qtd, unitary_value: +o.unit_price.toFixed(2) }],
     volumes: [{ height: p.height, width: p.width, length: p.length, weight: p.weight }], options: opcoes,
   });
@@ -310,6 +311,20 @@ router.put('/api/admin/melhor-envio', requireAdmin, (req, res) => {
   }
   res.json({ ok: true, config: embalagem() });
 });
+// Pontos de postagem (unidades J&T / Pegaki / Jadlog) perto do remetente, para a etiqueta de transportadoras que não coletam.
+router.get('/api/admin/melhor-envio/agencias', requireAdmin, async (req, res) => {
+  try {
+    const rem = remetente(), company = parseInt(req.query.company, 10);
+    if (!company) return res.status(400).json({ error: 'Informe a transportadora.' });
+    const qs = new URLSearchParams({ company: String(company), country: 'BR', state: String(req.query.uf || rem.state_abbr || '').toUpperCase(), city: String(req.query.cidade || rem.city || '') });
+    const j = await api('GET', '/shipment/agencies?' + qs.toString());
+    const lista = (Array.isArray(j) ? j : (j && (j.data || j.agencies)) || []).map(a => {
+      const ad = a.address || {}, cid = ad.city && typeof ad.city === 'object' ? ad.city.city : ad.city;
+      return { id: a.id, nome: a.name || a.company_name || ('Ponto ' + a.id), endereco: [ad.address, ad.number, ad.district, cid].filter(Boolean).join(', ') };
+    }).filter(a => a.id).slice(0, 30);
+    res.json({ ok: true, cidade: qs.get('city'), uf: qs.get('state'), agencias: lista });
+  } catch (e) { erro(res, e); }
+});
 router.post('/api/admin/orders/:id/melhor-envio/cotar', requireAdmin, async (req, res) => { try { res.json(await cotar(Number(req.params.id))); } catch (e) { erro(res, e); } });
 router.put('/api/admin/orders/:id/documento', requireAdmin, (req, res) => {
   const d = dig((req.body || {}).documento);
@@ -319,7 +334,7 @@ router.put('/api/admin/orders/:id/documento', requireAdmin, (req, res) => {
   db.prepare('UPDATE resellers SET doc = COALESCE(NULLIF(doc, \'\'), ?) WHERE id = (SELECT reseller_id FROM orders WHERE id = ?)').run(d, Number(req.params.id));
   res.json({ ok: true });
 });
-router.post('/api/admin/orders/:id/melhor-envio/comprar', requireAdmin, async (req, res) => { try { res.json(await comprar(Number(req.params.id), (req.body || {}).servico, (req.body || {}).documento, (req.body || {}).nome)); } catch (e) { erro(res, e); } });
+router.post('/api/admin/orders/:id/melhor-envio/comprar', requireAdmin, async (req, res) => { try { res.json(await comprar(Number(req.params.id), (req.body || {}).servico, (req.body || {}).documento, (req.body || {}).nome, { agencia: (req.body || {}).agencia })); } catch (e) { erro(res, e); } });
 router.post('/api/admin/orders/:id/melhor-envio/concluir', requireAdmin, async (req, res) => {
   try { await concluir(Number(req.params.id)); res.json({ ok: true, ...(await respostaPedido(Number(req.params.id))) }); } catch (e) { erro(res, e); }
 });
