@@ -212,6 +212,29 @@ router.post('/sales', (req, res) => {
   res.json({ id: info.lastInsertRowid });
 });
 
+// Editar uma venda: cliente, data, valor e custo (o lucro é valor − custo).
+router.put('/sales/:id', (req, res) => {
+  const v = db.prepare('SELECT * FROM sales WHERE id = ? AND reseller_id = ?').get(req.params.id, req.resellerId);
+  if (!v) return res.status(404).json({ error: 'Venda não encontrada.' });
+  const b = req.body || {};
+  const nome = b.client_name === undefined ? v.client_name : String(b.client_name || '').trim().slice(0, 120);
+  const valor = b.value === undefined ? v.value : Number(b.value);
+  const custo = b.cost === undefined ? (v.cost || 0) : Number(b.cost);
+  if (!nome) return res.status(400).json({ error: 'Informe o cliente.' });
+  if (!Number.isFinite(valor) || valor < 0 || valor > 1000000) return res.status(400).json({ error: 'Valor inválido.' });
+  if (!Number.isFinite(custo) || custo < 0 || custo > 1000000) return res.status(400).json({ error: 'Custo inválido.' });
+  let data = v.created_at;
+  if (b.date) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.date));
+    const d = m && new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    if (!m || d.getUTCMonth() !== +m[2] - 1 || d.getTime() > Date.now() + 864e5) return res.status(400).json({ error: 'Data inválida.' });
+    data = `${m[1]}-${m[2]}-${m[3]} 12:00:00`;
+  }
+  db.prepare('UPDATE sales SET client_name = ?, value = ?, cost = ?, created_at = ? WHERE id = ?')
+    .run(nome, Math.round(valor * 100) / 100, Math.round(custo * 100) / 100, data, v.id);
+  res.json(db.prepare('SELECT * FROM sales WHERE id = ?').get(v.id));
+});
+
 router.delete('/sales/:id', (req, res) => {
   db.prepare('DELETE FROM sales WHERE id = ? AND reseller_id = ?').run(req.params.id, req.resellerId);
   res.json({ ok: true });
