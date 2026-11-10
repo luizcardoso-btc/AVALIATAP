@@ -99,7 +99,7 @@ var WHATS = "5575988209055";
 /* ======================= */
 
 var $=function(i){return document.getElementById(i)};
-var TOKEN=null, ME=null, TIERS=[], PLATES=[], SALES=[], ORDERS=[];
+var TOKEN=null, ME=null, TIERS=[], PLATES=[], SALES=[], ORDERS=[], GRP=null;
 var per='all',cur='dash',mode='c',N={azul:10,preta:0};
 function qtot(){return N.azul+N.preta+(typeof nxExtraQty==='function'?nxExtraQty():0)}
 var selPl=0,pollTimer=null;
@@ -173,7 +173,7 @@ async function sub(){
 }
 async function boot(){
   ME=await api('/resellers/me');
-  await Promise.all([loadTiers(),loadPlates(),loadSales(),loadOrders()]);
+  await Promise.all([loadTiers(),loadPlates(),loadSales(),loadOrders(),loadGrp()]);
   $('auth').style.display='none';$('app').style.display='grid';
   $('un').textContent=ME.name;$('av').textContent=ME.name.charAt(0).toUpperCase();
   nav('dash');
@@ -183,6 +183,9 @@ var FRETE=0,FQ={cep:'',qtd:0,ops:[],sel:null,busy:false,aviso:''};
 function freteRot(){return FQ&&FQ.sel?'frete '+FQ.sel.nome:'frete calculado pelo CEP'}
 async function loadTiers(){TIERS=await api('/resellers/price-tiers');FRETE=0;}
 async function loadPlates(){PLATES=await api('/resellers/plates')}
+async function loadGrp(){try{GRP=await api('/resellers/grupo')}catch(e){GRP=null}}
+function grpHtml(){if(!GRP||!GRP.link||GRP.clicou)return '';return '<div class="card" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-color:#25d366;background:rgba(37,211,102,.08)"><div style="flex:1;min-width:220px"><b>📣 '+E(GRP.nome)+'</b><div class="mut" style="margin:4px 0 0">'+E(GRP.texto)+'</div></div><button class="btn p" style="background:#25d366;border-color:#25d366;color:#fff" onclick="grpEntrar()">Entrar no grupo do WhatsApp</button></div>'}
+async function grpEntrar(){if(!GRP||!GRP.link)return;window.open(GRP.link,'_blank','noopener');try{await api('/resellers/grupo/entrei',{method:'POST',body:'{}'});GRP.clicou=true;draw()}catch(e){}}
 async function loadSales(){SALES=await api('/resellers/sales')}
 async function loadOrders(){ORDERS=await api('/resellers/orders')}
 function minQ(){return TIERS.length?TIERS[0].min_qty:1}
@@ -212,7 +215,7 @@ var moS=SALES.filter(function(x){var d=U(x.created_at);return d.getMonth()===n.g
 var cost=a.reduce(function(s,x){return s+(x.cost||0)},0),est=PLATES.filter(function(p){return p.status==='estoque'}).length,ativ=PLATES.length-est;
 var les=lsLes(),done=Object.keys(les).filter(function(k){return les[k]}).length,pc=Math.round(done/LES.length*100);
 var b=[],mx=1;for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);var v=tot(SALES.filter(function(x){return U(x.created_at).toDateString()===d.toDateString()}));b.push([d.toLocaleDateString('pt-BR',{weekday:'short'}),v]);mx=Math.max(mx,v)}
-return '<div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>🎓 NFC Academy</b><div class="mut" style="margin:4px 0 8px">Próxima aula: '+E(LES[Math.min(done,LES.length-1)])+'</div><div class="pg"><i style="width:'+pc+'%"></i></div></div><b>'+pc+'%</b><button class="btn p" onclick="nav(\'academy\')">Continuar</button></div>'+
+return grpHtml()+'<div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>🎓 NFC Academy</b><div class="mut" style="margin:4px 0 8px">Próxima aula: '+E(LES[Math.min(done,LES.length-1)])+'</div><div class="pg"><i style="width:'+pc+'%"></i></div></div><b>'+pc+'%</b><button class="btn p" onclick="nav(\'academy\')">Continuar</button></div>'+
 '<h3 style="margin:22px 0 0">Vendas</h3>'+pills()+
 '<div class="k"><div><small>Faturamento total</small><b>'+R(tot(a))+'</b></div><div><small>Faturamento no mês</small><b>'+R(tot(moS))+'</b></div><div><small>Faturamento hoje</small><b>'+R(tot(hj))+'</b></div><div><small>Ticket médio</small><b>'+R(a.length?tot(a)/a.length:0)+'</b></div><div><small>Lucro estimado</small><b>'+R(tot(a)-cost)+'</b></div><div><small>Placas não configuradas</small><b>'+est+'</b></div><div><small>Placas configuradas</small><b>'+ativ+'</b></div></div>'+
 '<div class="g2"><div class="card"><h3>Últimos 7 dias</h3><div class="bars">'+b.map(function(x){return '<div><small>'+(x[1]?R(x[1]):'')+'</small><i style="height:'+x[1]/mx*100+'%"></i>'+x[0]+'</div>'}).join('')+'</div></div><div class="card"><h3>Vendas recentes</h3>'+(a.length?a.slice(0,5).map(function(x){return '<div class="qty"><span>'+E(x.client_name)+'<br><small class="mut">'+fd(x.created_at)+'</small></span><b>'+R(x.value)+'</b></div>'}).join(''):'<p class="mut">Nenhuma venda no período.</p>')+'</div></div>'}

@@ -237,6 +237,17 @@ router.post('/sales/estimar-custo', (req, res) => {
   res.json({ atualizadas: itens.length, itens });
 });
 
+// Grupo de ofertas no WhatsApp (convite configurado pelo admin em Revendedores).
+const gLer = (k, d) => { const r = db.prepare('SELECT valor FROM settings WHERE chave = ?').get(k); return r ? r.valor : d; };
+router.get('/grupo', (req, res) => {
+  const link = gLer('grupo_link', ''), r = db.prepare('SELECT grupo_clicou_em FROM resellers WHERE id = ?').get(req.resellerId);
+  res.json({ link, nome: gLer('grupo_nome', 'Grupo de ofertas NexTap'), texto: gLer('grupo_texto', 'Receba as ofertas e promoções diárias das placas NexTap em primeira mão.'), clicou: !!(r && r.grupo_clicou_em) });
+});
+router.post('/grupo/entrei', (req, res) => {
+  db.prepare("UPDATE resellers SET grupo_clicou_em = COALESCE(grupo_clicou_em, datetime('now')) WHERE id = ?").run(req.resellerId);
+  res.json({ ok: true });
+});
+
 // Editar uma venda: cliente, data, valor e custo (o lucro é valor − custo).
 router.put('/sales/:id', (req, res) => {
   const v = db.prepare('SELECT * FROM sales WHERE id = ? AND reseller_id = ?').get(req.params.id, req.resellerId);

@@ -512,6 +512,8 @@ CREATE TABLE IF NOT EXISTS sales (
     );
     CREATE INDEX IF NOT EXISTS idx_order_receb ON order_recebimentos(order_id);
   `),
+  // v30 — funil do grupo de ofertas no WhatsApp: quando o revendedor clicou no convite.
+  db => db.exec(`ALTER TABLE resellers ADD COLUMN grupo_clicou_em TEXT;`),
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
