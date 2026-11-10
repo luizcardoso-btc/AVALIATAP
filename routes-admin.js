@@ -199,6 +199,11 @@ router.get('/grupo', (req, res) => {
   res.json({ link: gGet('grupo_link'), nome: gGet('grupo_nome', 'Grupo de ofertas NexTap'), texto: gGet('grupo_texto', 'Receba as ofertas e promoções diárias das placas NexTap em primeira mão.'),
     msg: gGet('grupo_msg', 'Oi, {nome}! 👋 Aqui é da NexTap. Criamos o grupo de ofertas diárias das placas NFC para os revendedores. Entra por aqui: {link}'), total: t.n, clicaram: t.c || 0 });
 });
+router.post('/resellers/:id/convidado', (req, res) => {
+  const r = db.prepare("UPDATE resellers SET grupo_convidado_em = COALESCE(grupo_convidado_em, datetime('now')) WHERE id = ?").run(Number(req.params.id));
+  if (!r.changes) return res.status(404).json({ error: 'Revendedor não encontrado.' });
+  res.json({ ok: true });
+});
 router.put('/grupo', (req, res) => {
   const b = req.body || {}, link = String(b.link || '').trim();
   if (link && !/^https:\/\/(chat\.whatsapp\.com\/[A-Za-z0-9_-]{10,}|(www\.)?whatsapp\.com\/channel\/[A-Za-z0-9_-]{6,})\/?(\?.*)?$/.test(link)) return res.status(400).json({ error: 'Link inválido. Use o link de convite do grupo (https://chat.whatsapp.com/…) ou do canal (https://whatsapp.com/channel/…).' });
@@ -210,7 +215,7 @@ router.put('/grupo', (req, res) => {
 });
 router.get('/resellers', (req, res) => {
   const rows = db.prepare(`
-    SELECT r.id, r.name, r.email, r.whatsapp, r.addr_city, r.addr_state, r.created_at, r.cortesia, r.grupo_clicou_em,
+    SELECT r.id, r.name, r.email, r.whatsapp, r.addr_city, r.addr_state, r.created_at, r.cortesia, r.grupo_clicou_em, r.grupo_convidado_em,
       (SELECT COUNT(*) FROM orders o WHERE o.reseller_id=r.id) AS pedidos,
       ((SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.reseller_id=r.id AND o.a_receber=0 AND o.status IN ('pago','em_producao','enviado','entregue') AND o.id NOT IN (SELECT order_id FROM order_recebimentos))
        + (SELECT COALESCE(SUM(x.valor),0) FROM order_recebimentos x JOIN orders o ON o.id = x.order_id WHERE o.reseller_id=r.id AND o.status IN ('pago','em_producao','enviado','entregue'))) AS gasto,

@@ -514,6 +514,8 @@ CREATE TABLE IF NOT EXISTS sales (
   `),
   // v30 — funil do grupo de ofertas no WhatsApp: quando o revendedor clicou no convite.
   db => db.exec(`ALTER TABLE resellers ADD COLUMN grupo_clicou_em TEXT;`),
+  // v31 — quando o admin enviou o convite do grupo pelo WhatsApp.
+  db => db.exec(`ALTER TABLE resellers ADD COLUMN grupo_convidado_em TEXT;`),
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
