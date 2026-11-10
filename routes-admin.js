@@ -582,6 +582,49 @@ router.get('/payment-events', (req, res) => {
   res.json(db.prepare('SELECT * FROM payment_events ORDER BY id DESC LIMIT 60').all());
 });
 
+// Trocar o MODELO de uma placa já emitida (ex.: cadastrada como "azul", mas é a do Instagram).
+// Muda o modelo da placa, o do QR no estoque e a contagem do pedido de origem (azul/preta/outros modelos), sem mexer em valores.
+router.put('/plates/:id/modelo', (req, res) => {
+  const pl = db.prepare('SELECT id, order_id, color, tracking_code FROM plates WHERE id = ?').get(req.params.id);
+  if (!pl) return res.status(404).json({ error: 'Placa não encontrada.' });
+  const novo = String((req.body || {}).modelo || '').trim();
+  let prod = null;
+  if (novo !== 'azul' && novo !== 'preta') {
+    prod = db.prepare("SELECT id, nome FROM produtos WHERE nome = ? AND categoria LIKE 'Placas%'").get(novo);
+    if (!prod) return res.status(400).json({ error: 'Modelo não encontrado no catálogo.' });
+  }
+  if (novo === pl.color) return res.json({ ok: true, color: novo });
+  const velho = pl.color, ehCor = c => c === 'azul' || c === 'preta';
+  db.transaction(() => {
+    db.prepare('UPDATE plates SET color = ? WHERE id = ?').run(novo, pl.id);
+    db.prepare('UPDATE qr_estoque SET cor = ? WHERE plate_id = ?').run(novo, pl.id);
+    if (pl.order_id) {
+      const o = db.prepare('SELECT qty_azul, qty_preta, qty_outras FROM orders WHERE id = ?').get(pl.order_id);
+      if (o) {
+        // tira 1 do modelo antigo
+        if (velho === 'azul' && o.qty_azul > 0) db.prepare('UPDATE orders SET qty_azul = qty_azul - 1 WHERE id = ?').run(pl.order_id);
+        else if (velho === 'preta' && o.qty_preta > 0) db.prepare('UPDATE orders SET qty_preta = qty_preta - 1 WHERE id = ?').run(pl.order_id);
+        else if (!ehCor(velho)) {
+          const it = db.prepare('SELECT id, qty FROM order_items WHERE order_id = ? AND nome = ?').get(pl.order_id, velho);
+          if (it) { if (it.qty > 1) db.prepare('UPDATE order_items SET qty = qty - 1 WHERE id = ?').run(it.id); else db.prepare('DELETE FROM order_items WHERE id = ?').run(it.id); }
+          if (o.qty_outras > 0) db.prepare('UPDATE orders SET qty_outras = qty_outras - 1 WHERE id = ?').run(pl.order_id);
+        }
+        // põe 1 no modelo novo
+        if (novo === 'azul') db.prepare('UPDATE orders SET qty_azul = qty_azul + 1 WHERE id = ?').run(pl.order_id);
+        else if (novo === 'preta') db.prepare('UPDATE orders SET qty_preta = qty_preta + 1 WHERE id = ?').run(pl.order_id);
+        else {
+          const it = db.prepare('SELECT id FROM order_items WHERE order_id = ? AND nome = ?').get(pl.order_id, prod.nome);
+          if (it) db.prepare('UPDATE order_items SET qty = qty + 1 WHERE id = ?').run(it.id);
+          else db.prepare('INSERT INTO order_items (order_id, produto_id, nome, qty) VALUES (?, ?, ?, 1)').run(pl.order_id, prod.id, prod.nome);
+          db.prepare('UPDATE orders SET qty_outras = qty_outras + 1 WHERE id = ?').run(pl.order_id);
+        }
+      }
+    }
+    pedidos.registrarEvento({ origem: 'admin', order_id: pl.order_id || null, resultado: 'modelo_placa_trocado', detalhe: `placa ${pl.tracking_code || pl.id}: "${velho}" → "${novo}"` });
+  })();
+  res.json({ ok: true, color: novo });
+});
+
 // Editar o código (número) de uma placa. O revendedor passa a ver o novo código assim que abrir/atualizar "Minhas placas".
 router.put('/plates/:id/codigo', (req, res) => {
   const pl = db.prepare('SELECT id, tracking_code FROM plates WHERE id = ?').get(req.params.id);

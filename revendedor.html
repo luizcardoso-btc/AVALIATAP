@@ -237,7 +237,7 @@ function plGrid(){
   return '<div class="grid">'+l.map(function(p){
     var lr=fuso(p.last_read_at);
     return '<div class="pl"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:18px">'+E(pc(p))+'</b>'+plTag(p)+'</div>'
-    +'<div><i class="sw" style="background:'+(p.color==='azul'?'#1d4ed8':'#111')+'"></i>Placa '+p.color+'</div>'
+    +'<div><i class="sw" style="background:'+(/azul/i.test(p.color)?'#1d4ed8':'#111')+'"></i>'+(p.color==='azul'||p.color==='preta'?'Placa '+p.color:E(String(p.color).replace(/^Placa\s+/i,'Placa ')))+'</div>'
     +'<div>'+(p.client_name?'<b>'+E(p.client_name)+'</b>':'<span class="mut">Sem cliente / empresa</span>')+(p.plate_label?'<div class="mut">'+E(p.plate_label)+'</div>':'')+'</div>'
     +(p.destination_url?'<div class="mut" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+E(p.destination_type||'Destino')+' → '+E(p.destination_url)+'</div>':'<div class="mut">Sem destino</div>')
     +'<div class="mut">Leituras: <b style="color:var(--tx)">'+(p.reads_total||0)+'</b>'+(lr?' · última '+lr:'')+'</div>'
