@@ -747,7 +747,11 @@ router.get('/aquisicao', (req, res) => {
       roas: gasto ? r2(rec / gasto) : null, lucro_apos_mkt: gasto ? r2(luc - gasto) : null };
   });
   const dd = []; for (let i = 44; i >= 0; i--) { const d = new Date(Date.now() - i * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Bahia' }); dd.push(diario[d] || { dia: d, cadastros: 0, novos_compradores: 0 }); }
-  res.json({ meses: out, diario: dd, estados: Object.values(estados).map(e => ({ ...e, receita: r2(e.receita), taxa: e.cadastros ? r2(e.compraram / e.cadastros * 100) : 0 })).sort((a, b) => b.cadastros - a.cadastros).slice(0, 12), hoje });
+  const total = db.prepare('SELECT COUNT(*) n FROM resellers').get().n;
+  const nTeste = db.prepare("SELECT COUNT(*) n FROM resellers WHERE name = 'Conta de teste NexTap'").get().n;
+  const nCort = db.prepare("SELECT COUNT(*) n FROM resellers WHERE cortesia = 1 AND name != 'Conta de teste NexTap'").get().n;
+  const resumo = { total, teste: nTeste, cortesia: nCort, contados: revs.length, esperado: total - nTeste - nCort };
+  res.json({ resumo, meses: out, diario: dd, estados: Object.values(estados).map(e => ({ ...e, receita: r2(e.receita), taxa: e.cadastros ? r2(e.compraram / e.cadastros * 100) : 0 })).sort((a, b) => b.cadastros - a.cadastros).slice(0, 12), hoje });
 });
 
 router.put('/aquisicao/gasto', (req, res) => {
