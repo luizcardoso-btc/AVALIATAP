@@ -702,6 +702,62 @@ router.post('/price-tiers', (req, res) => {
   res.json({ ok: true });
 });
 
+
+// ---------- Aquisição: de cada mês de cadastro, quantos entraram, quantos compraram e quanto renderam ----------
+// Cadastro em horário de Brasília (UTC−3). Exclui contas de cortesia e a conta de teste. O gasto de marketing é digitado por mês.
+router.get('/aquisicao', (req, res) => {
+  const fin = require('./financeiro.js');
+  const cfg = fin.configuracao();
+  const r2 = fin.r2;
+  const PAGOS = ['pago', 'em_producao', 'enviado', 'entregue'];
+  const revs = db.prepare(`SELECT id, name, addr_state, datetime(created_at,'-3 hours') AS cad FROM resellers WHERE cortesia = 0 AND name != 'Conta de teste NexTap'`).all();
+  const ords = db.prepare(`SELECT o.*, datetime(COALESCE(o.paid_at,o.created_at),'-3 hours') AS dt FROM orders o WHERE o.status IN ('pago','em_producao','enviado','entregue') ORDER BY COALESCE(o.paid_at,o.created_at), o.id`).all();
+  const recebidoPor = {};
+  for (const x of db.prepare('SELECT order_id, SUM(valor) v FROM order_recebimentos GROUP BY order_id').all()) recebidoPor[x.order_id] = x.v;
+  const porRev = {};
+  for (const o of ords) (porRev[o.reseller_id] = porRev[o.reseller_id] || []).push(o);
+  const dias = (a, b) => Math.max(0, Math.round((new Date(b.replace(' ', 'T') + 'Z') - new Date(a.replace(' ', 'T') + 'Z')) / 864e5));
+  const meses = {}, estados = {}, diario = {};
+  const hoje = fin.hojeBR(), corte = new Date(Date.now() - 45 * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Bahia' });
+  for (const r of revs) {
+    const m = r.cad.slice(0, 7), dia = r.cad.slice(0, 10);
+    const M = meses[m] = meses[m] || { mes: m, cadastros: 0, compraram: 0, d7: 0, receita_1o: 0, receita_total: 0, lucro: 0, placas: 0, dias_soma: 0, recompra: 0 };
+    const my = porRev[r.id] || [];
+    M.cadastros++;
+    const uf = (r.addr_state || '—').toUpperCase().slice(0, 2);
+    const E = estados[uf] = estados[uf] || { uf, cadastros: 0, compraram: 0, receita: 0 };
+    E.cadastros++;
+    if (dia >= corte) { const D = diario[dia] = diario[dia] || { dia, cadastros: 0, novos_compradores: 0 }; D.cadastros++; }
+    if (!my.length) continue;
+    M.compraram++; E.compraram++;
+    const p = my[0];
+    M.receita_1o += p.total; M.dias_soma += dias(r.cad, p.dt); if (dias(r.cad, p.dt) <= 7) M.d7++;
+    if (my.length > 1) M.recompra++;
+    for (const o of my) { const f = o.a_receber ? Math.min(1, (recebidoPor[o.id] || 0) / (o.total || 1)) : 1; M.receita_total += o.total * f; M.lucro += fin.custosDoPedido(o, cfg).lucro * f; M.placas += o.qty_azul + o.qty_preta + (o.qty_outras || 0); E.receita += o.total * f; }
+    const dp = p.dt.slice(0, 10);
+    if (dp >= corte) { const D = diario[dp] = diario[dp] || { dia: dp, cadastros: 0, novos_compradores: 0 }; D.novos_compradores++; }
+  }
+  const out = Object.values(meses).sort((a, b) => b.mes.localeCompare(a.mes)).map(M => {
+    const gasto = Number(db.cfg('mkt_' + M.mes, 0)) || 0;
+    const rec = r2(M.receita_total), luc = r2(M.lucro);
+    return { mes: M.mes, cadastros: M.cadastros, compraram: M.compraram, taxa: M.cadastros ? r2(M.compraram / M.cadastros * 100) : 0,
+      compraram_7d: M.d7, recompra: M.recompra, dias_ate_comprar: M.compraram ? r2(M.dias_soma / M.compraram) : null,
+      ticket_1o: M.compraram ? r2(M.receita_1o / M.compraram) : null, receita: rec, lucro: luc, placas: M.placas,
+      gasto, custo_por_cadastro: gasto && M.cadastros ? r2(gasto / M.cadastros) : null, custo_por_comprador: gasto && M.compraram ? r2(gasto / M.compraram) : null,
+      roas: gasto ? r2(rec / gasto) : null, lucro_apos_mkt: gasto ? r2(luc - gasto) : null };
+  });
+  const dd = []; for (let i = 44; i >= 0; i--) { const d = new Date(Date.now() - i * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Bahia' }); dd.push(diario[d] || { dia: d, cadastros: 0, novos_compradores: 0 }); }
+  res.json({ meses: out, diario: dd, estados: Object.values(estados).map(e => ({ ...e, receita: r2(e.receita), taxa: e.cadastros ? r2(e.compraram / e.cadastros * 100) : 0 })).sort((a, b) => b.cadastros - a.cadastros).slice(0, 12), hoje });
+});
+
+router.put('/aquisicao/gasto', (req, res) => {
+  const mes = String(req.body.mes || ''), v = Number(String(req.body.valor ?? '').replace(',', '.'));
+  if (!/^\d{4}-\d{2}$/.test(mes)) return res.status(400).json({ error: 'Mês inválido.' });
+  if (!(v >= 0)) return res.status(400).json({ error: 'Valor inválido.' });
+  db.setCfg('mkt_' + mes, v);
+  res.json({ ok: true });
+});
+
 // Fornecedores, estoque, despesas, custos e lucro estimado
 router.use('/gestao', require('./routes-gestao.js'));
 
