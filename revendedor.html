@@ -184,8 +184,8 @@ function freteRot(){return FQ&&FQ.sel?'frete '+FQ.sel.nome:'frete calculado pelo
 async function loadTiers(){TIERS=await api('/resellers/price-tiers');FRETE=0;}
 async function loadPlates(){PLATES=await api('/resellers/plates')}
 async function loadGrp(){try{GRP=await api('/resellers/grupo')}catch(e){GRP=null}}
-function grpHtml(){if(!GRP||!GRP.link||GRP.clicou)return '';return '<div class="card" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-color:#25d366;background:rgba(37,211,102,.08)"><div style="flex:1;min-width:220px"><b>📣 '+E(GRP.nome)+'</b><div class="mut" style="margin:4px 0 0">'+E(GRP.texto)+'</div></div><button class="btn p" style="background:#25d366;border-color:#25d366;color:#fff" onclick="grpEntrar()">Entrar no grupo do WhatsApp</button></div>'}
-async function grpEntrar(){if(!GRP||!GRP.link)return;window.open(GRP.link,'_blank','noopener');try{await api('/resellers/grupo/entrei',{method:'POST',body:'{}'});GRP.clicou=true;draw()}catch(e){}}
+function grpHtml(){if(!GRP||!GRP.link)return '';return '<div class="card" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-color:#25d366;background:rgba(37,211,102,.08)"><div style="flex:1;min-width:220px"><b>📣 '+E(GRP.nome)+'</b><div class="mut" style="margin:4px 0 0">'+E(GRP.texto)+'</div></div><button class="btn p" style="background:#25d366;border-color:#25d366;color:#fff" onclick="grpEntrar()">'+(GRP.clicou?'Abrir o grupo de ofertas':'Entrar no grupo do WhatsApp')+'</button></div>'}
+async function grpEntrar(){if(!GRP||!GRP.link)return;window.open(GRP.link,'_blank','noopener');if(GRP.clicou)return;try{await api('/resellers/grupo/entrei',{method:'POST',body:'{}'});GRP.clicou=true;draw()}catch(e){}}
 async function loadSales(){SALES=await api('/resellers/sales')}
 async function loadOrders(){ORDERS=await api('/resellers/orders')}
 function minQ(){return TIERS.length?TIERS[0].min_qty:1}
