@@ -192,6 +192,8 @@ router.post('/resellers', async (req, res) => {
 // Convite do grupo/comunidade de ofertas no WhatsApp. O WhatsApp não permite adicionar pessoas sozinho: o revendedor entra clicando no convite.
 const gSet = db.prepare('SELECT valor FROM settings WHERE chave = ?'), gPut = db.prepare('INSERT INTO settings (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor');
 const gGet = (k, d = '') => { const r = gSet.get(k); return r ? r.valor : d; };
+// Grupo atual de ofertas (80 pessoas): vira o convite padrão; se o admin trocar o link no painel, a troca vale.
+db.prepare("INSERT OR IGNORE INTO settings (chave, valor) VALUES ('grupo_link', 'https://chat.whatsapp.com/LE4mSgrx5q3L52520KZJ7c')").run();
 router.get('/grupo', (req, res) => {
   const t = db.prepare("SELECT COUNT(*) n, SUM(grupo_clicou_em IS NOT NULL) c FROM resellers").get();
   res.json({ link: gGet('grupo_link'), nome: gGet('grupo_nome', 'Grupo de ofertas NexTap'), texto: gGet('grupo_texto', 'Receba as ofertas e promoções diárias das placas NexTap em primeira mão.'),
