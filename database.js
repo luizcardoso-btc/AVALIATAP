@@ -516,6 +516,16 @@ CREATE TABLE IF NOT EXISTS sales (
   db => db.exec(`ALTER TABLE resellers ADD COLUMN grupo_clicou_em TEXT;`),
   // v31 — quando o admin enviou o convite do grupo pelo WhatsApp.
   db => db.exec(`ALTER TABLE resellers ADD COLUMN grupo_convidado_em TEXT;`),
+  // v32 — vitrine de banners do Dashboard do revendedor (grupo, Black, Academy e banners do admin). Só adiciona.
+  db => db.exec(`CREATE TABLE IF NOT EXISTS vitrine_banners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL DEFAULT 'custom',
+    titulo TEXT, subtitulo TEXT, destaque TEXT, botao TEXT, destino TEXT, tema TEXT DEFAULT 'verde',
+    imagem BLOB, imagem_tipo TEXT,
+    ativo INTEGER NOT NULL DEFAULT 1, ordem INTEGER NOT NULL DEFAULT 50,
+    inicio TEXT, fim TEXT, cliques INTEGER NOT NULL DEFAULT 0,
+    atualizado_em TEXT DEFAULT CURRENT_TIMESTAMP, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`),
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
