@@ -13,8 +13,8 @@ const minimo = () => (tiers()[0] || { min_qty: 5 }).min_qty;
 
 const PAGINAS = {
   '/fornecedor-placas-nfc-google': {
-    titulo: 'Fornecedor de Placas NFC para Avaliação do Google | Atacado e Revenda',
-    desc: 'NexTap: fornecedor de placas NFC + QR Code dinâmico para avaliação do Google. Atacado para revender ou usar no seu negócio, painel de gestão e envio para todo o Brasil.',
+    titulo: 'Fornecedor de Placas NFC para Avaliação Google | NexTap',
+    desc: 'NexTap: fornecedor de placas NFC + QR Code dinâmico para avaliação do Google. Atacado para revender ou usar no seu negócio, com envio para todo o Brasil.',
     h1: 'Fornecedor de placas NFC para avaliação do Google',
     lead: 'A NexTap vende placas de acrílico com NFC e QR Code dinâmico para o cliente avaliar a sua empresa no Google em segundos. Compre no atacado para revender ou para usar no seu próprio negócio.',
     faq: [
@@ -38,7 +38,7 @@ const PAGINAS = {
 <ul><li>O NFC já vem na placa ou é cobrado à parte?</li><li>O QR Code é dinâmico (muda o destino sem trocar a placa)?</li><li>Existe painel para gerenciar os links dos clientes?</li><li>O preço é claro, por quantidade, e o frete é calculado antes de pagar?</li><li>Dá para pedir poucas unidades para testar?</li></ul>`,
   },
   '/placa-avaliacao-google-nfc': {
-    titulo: 'Placa de Avaliação Google com NFC e QR Code | Como Funciona | NexTap',
+    titulo: 'Placa de Avaliação Google com NFC e QR Code | NexTap',
     desc: 'Placa de avaliação do Google com NFC e QR Code para balcão: o cliente aproxima o celular e avalia sua empresa em segundos. Veja como funciona e como pedir.',
     h1: 'Placa de avaliação Google com NFC e QR Code',
     lead: 'Mais avaliações no Google ajudam sua empresa a ser encontrada e a ganhar confiança. Com a placa NexTap, o cliente aproxima o celular (NFC) ou lê o QR Code e cai direto na tela de avaliação.',

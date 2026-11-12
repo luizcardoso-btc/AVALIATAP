@@ -191,7 +191,7 @@ const { fotos } = require('./seo-fotos.js');
 module.exports = function (ctx) {
   const P = {}, ordemSeg = [], ordemGuia = [];
   const hubPath = '/placas-avaliacao-google-por-segmento';
-  const outros = slug => SEG.filter(s => s.slug !== slug).slice(0, 5);
+  const outros = slug => SEG.filter(s => s.slug !== slug);
   SEG.forEach(s => {
     const path = '/placa-avaliacao-google-para-' + s.slug;
     ordemSeg.push(path);

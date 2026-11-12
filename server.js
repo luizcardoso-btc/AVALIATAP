@@ -14,6 +14,7 @@ if (!process.env.MP_ACCESS_TOKEN) console.warn('AVISO: MP_ACCESS_TOKEN não defi
 if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) console.warn('AVISO: ADMIN_EMAIL/ADMIN_PASSWORD não definidos — login de admin desativado.');
 
 const app = express();
+app.use(require('compression')()); // gzip: páginas HTML/JSON carregam mais rápido (ajuda no Google)
 app.set('trust proxy', 1); // Railway fica atrás de um proxy
 // Domínio principal (ex.: SITE_HOST=www.seudominio.com.br): quem entrar por outro endereço (sem www, ou o endereço
 // .up.railway.app) é levado ao principal. Só páginas (GET): o webhook do Mercado Pago e o /health nunca são redirecionados.
