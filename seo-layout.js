@@ -1,9 +1,10 @@
 // Layout profissional das páginas de SEO (mesma identidade visual da home). ARQUIVO NOVO. Só gera HTML.
 const { fotos } = require('./seo-fotos.js');
+const midia = require('./seo-midia.js');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const R = n => 'R$ ' + Number(n).toFixed(2).replace('.', ',');
 
-const CSS = `:root{--bg:#fff;--soft:#eafbf1;--card:#fff;--tx:#0b1710;--mut:#5b6b60;--br:#dfece4;--pr:#0f9d4e;--pr2:#0c7a3d;--pr3:#0a5c2f;--grad:linear-gradient(135deg,#22c55e,#0a5c2f);--warn:#fff7e0;--warnb:#f3d27a}
+const CSS = midia.CSS + `:root{--bg:#fff;--soft:#eafbf1;--card:#fff;--tx:#0b1710;--mut:#5b6b60;--br:#dfece4;--pr:#0f9d4e;--pr2:#0c7a3d;--pr3:#0a5c2f;--grad:linear-gradient(135deg,#22c55e,#0a5c2f);--warn:#fff7e0;--warnb:#f3d27a}
 @media(prefers-color-scheme:dark){:root{--bg:#081410;--soft:#0e1f17;--card:#0f231a;--tx:#eafbf1;--mut:#8fb0a0;--br:#173428;--warn:#2a2410;--warnb:#6b5a1d}}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55}
 a{color:inherit;text-decoration:none}.w{max-width:1120px;margin:auto;padding:0 20px}img{max-width:100%}
@@ -47,7 +48,7 @@ footer{background:var(--soft);border-top:1px solid var(--br);padding:44px 0 26px
 
 .ph{position:relative;padding:0 0 26px 0}.ph>img.main{display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;border-radius:26px;box-shadow:0 34px 60px -26px #0a5c2f66}
 .ph .pl{height:auto;position:absolute;left:-18px;bottom:0;width:34%;max-width:150px;border-radius:16px;border:4px solid var(--bg);box-shadow:0 18px 34px -12px #0007;animation:fl 5.5s ease-in-out infinite}
-.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:26px}.gal img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:18px;display:block;box-shadow:0 20px 40px -26px #0a5c2f66}
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:26px}.gal img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:18px;display:block;box-shadow:0 20px 40px -26px #0a5c2f66}
 .card.lk .th{max-width:none;width:calc(100% + 44px);margin:-22px -22px 8px;height:140px;object-fit:cover;border-radius:16px 16px 0 0;display:block}
 @media(max-width:800px){.ph .pl{left:8px;width:30%}.ph>img.main{aspect-ratio:4/3}.hero{grid-template-columns:1fr;gap:10px}.hero .float{order:-1}.nav nav{display:none}.nav{height:66px}.nav .logo img{height:48px}.fg{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr}.float img{max-width:270px}}
 @media(max-width:480px){.fg{grid-template-columns:1fr}.btn.lg{width:100%;text-align:center}}`;
@@ -91,6 +92,7 @@ ${(() => { const f = fotos(s.slug); return f[0] ? `<div class="ph"><img class="m
 <div class="callout"><b>Quando pedir a avaliação</b><p>${esc(s.momento)}</p></div></div></section>
 ${(() => { const f = fotos(s.slug).slice(1); return f.length ? `<section><div class="w"><div class="c"><span class="tag">No dia a dia</span><h2>A placa no ambiente de ${esc(s.plural)}</h2></div><div class="gal">${f.map((x, i) => `<img loading="lazy" src="${x}" width="800" height="600" alt="${esc(s.nome)}: ambiente e atendimento ${i + 2}">`).join('')}</div></div></section>` : ''; })()}
 <section class="s" id="como"><div class="w"><div class="c"><span class="tag">Como funciona</span><h2>Do balcão à avaliação em 3 passos</h2></div><div class="grid steps"><div class="card step"><div class="num">1</div><h3>Coloque a placa</h3><p>Fixe a placa de acrílico em um ponto visível, como o balcão ou a recepção.</p></div><div class="card step"><div class="num">2</div><h3>Cliente aproxima o celular</h3><p>Por NFC ou lendo o QR Code com a câmera. Sem aplicativo e sem digitar nada.</p></div><div class="card step"><div class="num">3</div><h3>Avalia no Google</h3><p>A tela de avaliação da sua empresa abre direto. O link pode ser trocado depois pelo painel.</p></div></div></div></section>
+${midia.provaHtml()}
 <section id="precos"><div class="w"><div class="c"><span class="tag">Preços</span><h2>Quanto custa a placa NexTap</h2><p class="lead">Preço por placa conforme a quantidade. Compre para usar no seu negócio ou para revender a outros ${esc(s.plural)}.</p></div>${tierCards(tiers, minimo)}
 <div class="callout warn"><b>Cuidados importantes</b><p>${esc(s.cuidado)} Seguindo as regras do Google, peça a todos os clientes, sem oferecer vantagens e sem escolher quem avalia.</p></div></div></section>
 <section class="s" id="faq"><div class="w"><div class="c"><span class="tag">Dúvidas</span><h2>Perguntas frequentes</h2></div>${faqHtml(faq)}</div></section>
@@ -101,6 +103,7 @@ ${(() => { const f = fotos(s.slug).slice(1); return f.length ? `<section><div cl
     body = `<div class="w">${crumbs(p)}<div class="hero solo"><div><span class="tag">${p.tipo === 'guia' ? 'Guia' : p.tipo === 'hub' ? 'Segmentos' : 'NexTap'}</span><h1>${esc(p.h1)}</h1><p class="lead">${esc(p.lead)}</p>
 <div class="row"><a class="btn p lg" href="/revendedor/?tab=registro">Criar conta grátis</a><a class="btn lg" href="/placas-avaliacao-google-por-segmento">Ver por segmento</a></div><div class="chips"><span>NFC + QR Code dinâmico</span><span>Sem aplicativo</span><span>Envio para todo o Brasil</span></div></div></div></div>
 <section class="s"><div class="w"><div class="art">${p.corpo()}</div></div></section>
+${(p.midia || []).map(k => ({ painel: midia.painelHtml, prova: midia.provaHtml, videos: midia.videosHtml, fotos: midia.fotosHtml })[k]()).join('')}
 <section><div class="w"><div class="c"><span class="tag">Dúvidas</span><h2>Perguntas frequentes</h2></div>${faqHtml(faq)}</div></section>
 <div class="w">${ctaBlock('Pronto para começar?', 'Crie sua conta grátis e faça seu pedido pelo painel.')}</div>`;
   }

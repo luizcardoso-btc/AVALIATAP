@@ -85,6 +85,7 @@ app.use('/', require('./routes-public.js')); // /r/:code — link do QR Code / N
 // no mesmo domínio da API, então não há problema de CORS.
 ['logo.png', 'placa.jpg', 'placas-nextap.jpg', 'favicon.png'].forEach(f =>
   app.get('/' + f, (req, res) => res.sendFile(path.join(__dirname, f), { maxAge: '1d' })));
+app.use('/midia', express.static(path.join(__dirname, 'midia'), { maxAge: '7d' })); // fotos e vídeos reais (prova social)
 app.use('/segmentos', express.static(path.join(__dirname, 'segmentos'), { maxAge: '7d' })); // fotos das páginas por segmento
 app.use('/academy', express.static(path.join(__dirname, 'academy'), { maxAge: '7d' })); // vídeos da NFC Academy
 const page = f => (req, res) => res.sendFile(path.join(__dirname, f));

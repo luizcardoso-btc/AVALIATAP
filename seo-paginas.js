@@ -75,6 +75,10 @@ const PAGINAS = {
 const layout = require('./seo-layout.js');
 const seg = require('./seo-segmentos.js')({ tabela, minimo });
 Object.assign(PAGINAS, seg.paginas);
+PAGINAS['/fornecedor-placas-nfc-google'].midia = ['fotos', 'prova', 'videos'];
+PAGINAS['/placa-avaliacao-google-nfc'].midia = ['videos', 'prova'];
+PAGINAS['/revender-placas-nfc'].midia = ['painel', 'prova', 'videos'];
+PAGINAS[seg.hubPath].midia = ['prova', 'videos'];
 const LINKS = Object.keys(PAGINAS);
 const FOOT = ['/fornecedor-placas-nfc-google', '/placa-avaliacao-google-nfc', '/revender-placas-nfc', seg.hubPath, '/como-conseguir-avaliacoes-no-google'];
 
@@ -91,6 +95,7 @@ function render(req, path, p) {
     author: { '@type': 'Organization', name: 'NexTap', url: url + '/' }, publisher: { '@type': 'Organization', name: 'NexTap', logo: { '@type': 'ImageObject', url: url + '/logo.png' } } });
   if (preco.length && p.tipo !== 'guia') ld.push({ '@context': 'https://schema.org', '@type': 'Product', name: 'Placa de avaliação Google com NFC e QR Code', brand: { '@type': 'Brand', name: 'NexTap' }, image: url + '/placa.jpg',
     description: 'Placa de acrílico com NFC e QR Code dinâmico para avaliação do Google.', offers: { '@type': 'AggregateOffer', priceCurrency: 'BRL', lowPrice: Math.min(...preco).toFixed(2), highPrice: Math.max(...preco).toFixed(2), offerCount: t.length, availability: 'https://schema.org/InStock', url: canon } });
+  if ((p.midia || []).includes('videos')) ld.push(...require('./seo-midia.js').videoLd(url));
   const j = JSON.stringify(ld).replace(/</g, '\\u003c');
   return layout.render({ p, url, canon, j, faq, tiers: t, minimo: minimo(), FOOT, FOOTSEG: seg.segmentos.slice(0, 7) });
 }
