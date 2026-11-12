@@ -72,7 +72,10 @@ const PAGINAS = {
 <h2>Como vender</h2><ul><li>Leve uma placa de demonstração e mostre o cliente avaliando na hora.</li><li>Foque em negócios com muito movimento: restaurantes, clínicas, salões e oficinas.</li><li>Ofereça instalação e configuração do link como parte do serviço.</li></ul>`,
   },
 };
+const seg = require('./seo-segmentos.js')({ tabela, minimo });
+Object.assign(PAGINAS, seg.paginas);
 const LINKS = Object.keys(PAGINAS);
+const FOOT = ['/fornecedor-placas-nfc-google', '/placa-avaliacao-google-nfc', '/revender-placas-nfc', seg.hubPath, '/como-conseguir-avaliacoes-no-google'];
 
 function render(req, path, p) {
   const url = `https://${host(req)}`, canon = url + path;
@@ -80,9 +83,12 @@ function render(req, path, p) {
   const t = tiers(), preco = t.map(x => x.unit_price);
   const ld = [
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
-    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'NexTap', item: url + '/' }, { '@type': 'ListItem', position: 2, name: p.h1, item: canon }] },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'NexTap', item: url + '/' }]
+      .concat(p.hub ? [{ '@type': 'ListItem', position: 2, name: 'Por segmento', item: url + p.hub }, { '@type': 'ListItem', position: 3, name: p.h1, item: canon }] : [{ '@type': 'ListItem', position: 2, name: p.h1, item: canon }]) },
   ];
-  if (preco.length) ld.push({ '@context': 'https://schema.org', '@type': 'Product', name: 'Placa de avaliação Google com NFC e QR Code', brand: { '@type': 'Brand', name: 'NexTap' }, image: url + '/placa.jpg',
+  if (p.tipo === 'guia') ld.push({ '@context': 'https://schema.org', '@type': 'Article', headline: p.h1, description: p.desc, inLanguage: 'pt-BR', mainEntityOfPage: canon, image: url + '/placa.jpg', datePublished: '2026-11-12', dateModified: '2026-11-12',
+    author: { '@type': 'Organization', name: 'NexTap', url: url + '/' }, publisher: { '@type': 'Organization', name: 'NexTap', logo: { '@type': 'ImageObject', url: url + '/logo.png' } } });
+  if (preco.length && p.tipo !== 'guia') ld.push({ '@context': 'https://schema.org', '@type': 'Product', name: 'Placa de avaliação Google com NFC e QR Code', brand: { '@type': 'Brand', name: 'NexTap' }, image: url + '/placa.jpg',
     description: 'Placa de acrílico com NFC e QR Code dinâmico para avaliação do Google.', offers: { '@type': 'AggregateOffer', priceCurrency: 'BRL', lowPrice: Math.min(...preco).toFixed(2), highPrice: Math.max(...preco).toFixed(2), offerCount: t.length, availability: 'https://schema.org/InStock', url: canon } });
   const j = JSON.stringify(ld).replace(/</g, '\\u003c');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png">
@@ -95,12 +101,12 @@ header{border-bottom:1px solid var(--br)}.nav{display:flex;align-items:center;ju
 h1{font-size:clamp(28px,5vw,42px);line-height:1.12;margin:36px 0 12px}h2{font-size:24px;margin:34px 0 8px}.lead{font-size:18px;color:var(--mut)}.mut{color:var(--mut)}
 table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--br)}th{background:var(--soft)}li{margin:6px 0}
 details{border:1px solid var(--br);border-radius:12px;padding:12px 16px;margin:10px 0}summary{font-weight:700;cursor:pointer}.cta{background:var(--soft);border-radius:18px;padding:26px;text-align:center;margin:40px 0}
-footer{border-top:1px solid var(--br);padding:24px 0;font-size:14px;color:var(--mut)}footer a{margin-right:14px}</style></head><body>
+footer{border-top:1px solid var(--br);padding:24px 0;font-size:14px;color:var(--mut)}footer a{margin-right:14px;display:inline-block}.mut a{text-decoration:underline}li a{font-weight:600}</style></head><body>
 <header><div class="w nav"><a href="/"><img src="/logo.png" alt="NexTap"></a><a class="btn" href="/revendedor/?tab=registro">Criar conta grátis</a></div></header>
 <main class="w"><h1>${esc(p.h1)}</h1><p class="lead">${esc(p.lead)}</p>${p.corpo()}
 <h2>Perguntas frequentes</h2>${faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p class="mut">${esc(a)}</p></details>`).join('')}
 <div class="cta"><h2 style="margin-top:0">Pronto para começar?</h2><p class="mut">Crie sua conta grátis e faça seu pedido pelo painel.</p><a class="btn" href="/revendedor/?tab=registro">Criar conta grátis e comprar placas</a></div></main>
-<footer><div class="w"><a href="/">NexTap</a>${LINKS.map(l => `<a href="${l}">${esc(PAGINAS[l].h1)}</a>`).join('')}<br>© 2026 NexTap. Todos os direitos reservados.</div></footer></body></html>`;
+<footer><div class="w"><a href="/">NexTap</a>${FOOT.map(l => `<a href="${l}">${esc(PAGINAS[l].h1)}</a>`).join('')}<br>© 2026 NexTap. Todos os direitos reservados.</div></footer></body></html>`;
 }
 LINKS.forEach(path => router.get(path, (req, res) => res.set('Cache-Control', 'public, max-age=600').type('html').send(render(req, path, PAGINAS[path]))));
 
