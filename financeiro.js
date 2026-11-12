@@ -81,7 +81,8 @@ function despesasDoPeriodo(j, primeiraData) {
     }
   }
   // Compras de placas (estoque) pagas no período também são "despesas de ativos".
-  const compras = r2(um("SELECT COALESCE(SUM(quantidade*COALESCE(custo_unit,0)+custo_extra),0) n FROM estoque_mov WHERE tipo='compra' AND data >= ? AND data <= ?", iniData, fimData).n);
+  // Em "Todo o período" entram TODAS as compras (antes, compras anteriores ao 1º pedido/despesa ficavam de fora e o total não batia com o Estoque).
+  const compras = r2(um("SELECT COALESCE(SUM(quantidade*COALESCE(custo_unit,0)+custo_extra),0) n FROM estoque_mov WHERE tipo='compra' AND (? = 1 OR (substr(data,1,10) >= ? AND substr(data,1,10) <= ?))", j.iniMs === null ? 1 : 0, iniData, fimData).n);
   return { total: r2(total), itens, ativos_manuais: r2(totalAtivos), ativos_itens: itensAtivos, ativos_compras: compras, dias, iniData, fimData };
 }
 
