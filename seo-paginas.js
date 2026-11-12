@@ -7,7 +7,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const R = n => 'R$ ' + Number(n).toFixed(2).replace('.', ',');
 const host = req => ((process.env.SITE_HOST || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '')) || req.hostname;
 const tiers = () => db.prepare('SELECT min_qty, max_qty, unit_price FROM price_tiers ORDER BY min_qty').all();
-const faixa = t => t.max_qty ? (t.min_qty === t.max_qty ? `${t.min_qty} placas` : `${t.min_qty} a ${t.max_qty} placas`) : `${t.min_qty} placas ou mais`;
+const faixa = t => t.max_qty && t.max_qty < 100000 ? (t.min_qty === t.max_qty ? `${t.min_qty} placas` : `${t.min_qty} a ${t.max_qty} placas`) : `${t.min_qty} placas ou mais`;
 const tabela = () => `<table><thead><tr><th>Quantidade</th><th>Preço por placa</th></tr></thead><tbody>${tiers().map(t => `<tr><td>${faixa(t)}</td><td><b>${R(t.unit_price)}</b></td></tr>`).join('')}</tbody></table>`;
 const minimo = () => (tiers()[0] || { min_qty: 5 }).min_qty;
 
@@ -72,6 +72,7 @@ const PAGINAS = {
 <h2>Como vender</h2><ul><li>Leve uma placa de demonstração e mostre o cliente avaliando na hora.</li><li>Foque em negócios com muito movimento: restaurantes, clínicas, salões e oficinas.</li><li>Ofereça instalação e configuração do link como parte do serviço.</li></ul>`,
   },
 };
+const layout = require('./seo-layout.js');
 const seg = require('./seo-segmentos.js')({ tabela, minimo });
 Object.assign(PAGINAS, seg.paginas);
 const LINKS = Object.keys(PAGINAS);
@@ -91,22 +92,7 @@ function render(req, path, p) {
   if (preco.length && p.tipo !== 'guia') ld.push({ '@context': 'https://schema.org', '@type': 'Product', name: 'Placa de avaliação Google com NFC e QR Code', brand: { '@type': 'Brand', name: 'NexTap' }, image: url + '/placa.jpg',
     description: 'Placa de acrílico com NFC e QR Code dinâmico para avaliação do Google.', offers: { '@type': 'AggregateOffer', priceCurrency: 'BRL', lowPrice: Math.min(...preco).toFixed(2), highPrice: Math.max(...preco).toFixed(2), offerCount: t.length, availability: 'https://schema.org/InStock', url: canon } });
   const j = JSON.stringify(ld).replace(/</g, '\\u003c');
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png">
-<title>${esc(p.titulo)}</title><meta name="description" content="${esc(p.desc)}"><link rel="canonical" href="${esc(canon)}"><meta name="robots" content="index,follow,max-image-preview:large"><meta name="theme-color" content="#0f9d4e">
-<meta property="og:type" content="article"><meta property="og:locale" content="pt_BR"><meta property="og:site_name" content="NexTap"><meta property="og:title" content="${esc(p.titulo)}"><meta property="og:description" content="${esc(p.desc)}"><meta property="og:url" content="${esc(canon)}"><meta property="og:image" content="${esc(url)}/placa.jpg"><meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">${j}</script>
-<style>:root{--pr:#0f9d4e;--pr3:#0a5c2f;--bg:#fff;--tx:#0b1710;--mut:#5b6b60;--br:#dfece4;--soft:#eafbf1}@media(prefers-color-scheme:dark){:root{--bg:#081410;--tx:#eafbf1;--mut:#8fb0a0;--br:#173428;--soft:#0e1f17}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.6}a{color:var(--pr);text-decoration:none}.w{max-width:820px;margin:auto;padding:0 20px}
-header{border-bottom:1px solid var(--br)}.nav{display:flex;align-items:center;justify-content:space-between;height:72px}.nav img{height:52px}.btn{display:inline-block;background:linear-gradient(135deg,#22c55e,#0a5c2f);color:#fff;font-weight:700;padding:12px 22px;border-radius:10px}
-h1{font-size:clamp(28px,5vw,42px);line-height:1.12;margin:36px 0 12px}h2{font-size:24px;margin:34px 0 8px}.lead{font-size:18px;color:var(--mut)}.mut{color:var(--mut)}
-table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--br)}th{background:var(--soft)}li{margin:6px 0}
-details{border:1px solid var(--br);border-radius:12px;padding:12px 16px;margin:10px 0}summary{font-weight:700;cursor:pointer}.cta{background:var(--soft);border-radius:18px;padding:26px;text-align:center;margin:40px 0}
-footer{border-top:1px solid var(--br);padding:24px 0;font-size:14px;color:var(--mut)}footer a{margin-right:14px;display:inline-block}.mut a{text-decoration:underline}li a{font-weight:600}</style></head><body>
-<header><div class="w nav"><a href="/"><img src="/logo.png" alt="NexTap"></a><a class="btn" href="/revendedor/?tab=registro">Criar conta grátis</a></div></header>
-<main class="w"><h1>${esc(p.h1)}</h1><p class="lead">${esc(p.lead)}</p>${p.corpo()}
-<h2>Perguntas frequentes</h2>${faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p class="mut">${esc(a)}</p></details>`).join('')}
-<div class="cta"><h2 style="margin-top:0">Pronto para começar?</h2><p class="mut">Crie sua conta grátis e faça seu pedido pelo painel.</p><a class="btn" href="/revendedor/?tab=registro">Criar conta grátis e comprar placas</a></div></main>
-<footer><div class="w"><a href="/">NexTap</a>${FOOT.map(l => `<a href="${l}">${esc(PAGINAS[l].h1)}</a>`).join('')}<br>© 2026 NexTap. Todos os direitos reservados.</div></footer></body></html>`;
+  return layout.render({ p, url, canon, j, faq, tiers: t, minimo: minimo(), FOOT, FOOTSEG: seg.segmentos.slice(0, 7) });
 }
 LINKS.forEach(path => router.get(path, (req, res) => res.set('Cache-Control', 'public, max-age=600').type('html').send(render(req, path, PAGINAS[path]))));
 
