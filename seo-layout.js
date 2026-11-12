@@ -1,4 +1,5 @@
 // Layout profissional das páginas de SEO (mesma identidade visual da home). ARQUIVO NOVO. Só gera HTML.
+const { fotos } = require('./seo-fotos.js');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const R = n => 'R$ ' + Number(n).toFixed(2).replace('.', ',');
 
@@ -43,7 +44,12 @@ details{border:1px solid var(--br);border-radius:12px;padding:15px 18px;margin-b
 footer{background:var(--soft);border-top:1px solid var(--br);padding:44px 0 26px;font-size:14px;color:var(--mut)}.fg{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:30px}.fg img{height:58px;margin-bottom:10px}.fg h4{margin:0 0 10px;color:var(--tx);font-size:14px}.fg a{display:block;padding:3px 0}.fg a:hover{color:var(--pr)}
 .copy{border-top:1px solid var(--br);margin-top:28px;padding-top:18px;font-size:13px}
 .wa{position:fixed;right:18px;bottom:18px;width:54px;height:54px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;box-shadow:0 6px 18px #0004;z-index:8}
-@media(max-width:800px){.hero{grid-template-columns:1fr;gap:10px}.hero .float{order:-1}.nav nav{display:none}.nav{height:66px}.nav .logo img{height:48px}.fg{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr}.float img{max-width:270px}}
+
+.ph{position:relative;padding:0 0 26px 0}.ph>img.main{display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;border-radius:26px;box-shadow:0 34px 60px -26px #0a5c2f66}
+.ph .pl{height:auto;position:absolute;left:-18px;bottom:0;width:34%;max-width:150px;border-radius:16px;border:4px solid var(--bg);box-shadow:0 18px 34px -12px #0007;animation:fl 5.5s ease-in-out infinite}
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:26px}.gal img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:18px;display:block;box-shadow:0 20px 40px -26px #0a5c2f66}
+.card.lk .th{max-width:none;width:calc(100% + 44px);margin:-22px -22px 8px;height:140px;object-fit:cover;border-radius:16px 16px 0 0;display:block}
+@media(max-width:800px){.ph .pl{left:8px;width:30%}.ph>img.main{aspect-ratio:4/3}.hero{grid-template-columns:1fr;gap:10px}.hero .float{order:-1}.nav nav{display:none}.nav{height:66px}.nav .logo img{height:48px}.fg{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr}.float img{max-width:270px}}
 @media(max-width:480px){.fg{grid-template-columns:1fr}.btn.lg{width:100%;text-align:center}}`;
 
 const check = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -63,7 +69,7 @@ function chrome({ p, url, canon, j, tiers, minimo, FOOT, FOOTSEG, title, body })
 <div class="copy">© 2026 NexTap. Todos os direitos reservados.</div></div></footer>`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png">
 <title>${esc(p.titulo)}</title><meta name="description" content="${esc(p.desc)}"><link rel="canonical" href="${esc(canon)}"><meta name="robots" content="index,follow,max-image-preview:large"><meta name="theme-color" content="#0f9d4e">
-<meta property="og:type" content="${p.tipo === 'guia' ? 'article' : 'website'}"><meta property="og:locale" content="pt_BR"><meta property="og:site_name" content="NexTap"><meta property="og:title" content="${esc(p.titulo)}"><meta property="og:description" content="${esc(p.desc)}"><meta property="og:url" content="${esc(canon)}"><meta property="og:image" content="${esc(url)}/placa.jpg"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="${p.tipo === 'guia' ? 'article' : 'website'}"><meta property="og:locale" content="pt_BR"><meta property="og:site_name" content="NexTap"><meta property="og:title" content="${esc(p.titulo)}"><meta property="og:description" content="${esc(p.desc)}"><meta property="og:url" content="${esc(canon)}"><meta property="og:image" content="${esc(url)}${(p.seg && fotos(p.seg.slug)[0]) || '/placa.jpg'}"><meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">${j}</script><style>${CSS}</style></head><body>${nav}${body}${foot}</body></html>`;
 }
 
@@ -78,11 +84,12 @@ function render(ctx) {
     const s = p.seg;
     body = `<div class="w">${crumbs(p)}<div class="hero"><div><span class="tag">Para ${esc(s.plural)}</span><h1>${esc(p.h1)}</h1><p class="lead">${esc(p.lead)}</p>
 <div class="row"><a class="btn p lg" href="/revendedor/?tab=registro">Criar conta e comprar placas</a><a class="btn lg" href="#precos">Ver preços</a></div><div class="chips"><span>NFC + QR Code dinâmico</span><span>Sem aplicativo</span><span>Envio para todo o Brasil</span></div></div>
-<div class="float"><img src="/placa.jpg" width="400" height="500" alt="Placa NexTap de avaliação do Google com NFC e QR Code para ${esc(s.plural)}"></div></div>
+${(() => { const f = fotos(s.slug); return f[0] ? `<div class="ph"><img class="main" src="${f[0]}" width="800" height="1000" alt="${esc(s.nome)}: equipe atendendo clientes no dia a dia"><img class="pl" src="/placa.jpg" width="150" height="187" alt="Placa NexTap de avaliação do Google com NFC e QR Code"></div>` : `<div class="float"><img src="/placa.jpg" width="400" height="500" alt="Placa NexTap de avaliação do Google com NFC e QR Code para ${esc(s.plural)}"></div>`; })()}</div>
 <div class="stats"><div class="stat"><b>NFC + QR Code</b><small>na mesma placa</small></div><div class="stat"><b>Poucos segundos</b><small>para o cliente avaliar</small></div><div class="stat"><b>A partir de ${minimo} placas</b><small>pedido mínimo baixo</small></div></div></div>
 <section class="s" id="por-que"><div class="w"><div class="c"><span class="tag">Por que importa</span><h2>Avaliações no Google para ${esc(s.art)}</h2><p class="lead">${esc(s.intro)}</p></div><div class="grid">${s.porque.map((x, i) => `<div class="card"><div class="num">${i + 1}</div><p style="margin:0;color:var(--tx);font-size:15.5px">${esc(x)}</p></div>`).join('')}</div></div></section>
 <section id="onde"><div class="w"><div class="c"><span class="tag">Onde colocar</span><h2>Os melhores pontos para a placa</h2></div><div class="grid">${s.onde.map(x => `<div class="card"><div class="num" style="background:var(--soft);color:var(--pr2)">${check}</div><p style="margin:0;color:var(--tx);font-size:15.5px">${esc(x)}</p></div>`).join('')}</div>
 <div class="callout"><b>Quando pedir a avaliação</b><p>${esc(s.momento)}</p></div></div></section>
+${(() => { const f = fotos(s.slug).slice(1); return f.length ? `<section><div class="w"><div class="c"><span class="tag">No dia a dia</span><h2>A placa no ambiente de ${esc(s.plural)}</h2></div><div class="gal">${f.map((x, i) => `<img loading="lazy" src="${x}" width="800" height="600" alt="${esc(s.nome)}: ambiente e atendimento ${i + 2}">`).join('')}</div></div></section>` : ''; })()}
 <section class="s" id="como"><div class="w"><div class="c"><span class="tag">Como funciona</span><h2>Do balcão à avaliação em 3 passos</h2></div><div class="grid steps"><div class="card step"><div class="num">1</div><h3>Coloque a placa</h3><p>Fixe a placa de acrílico em um ponto visível, como o balcão ou a recepção.</p></div><div class="card step"><div class="num">2</div><h3>Cliente aproxima o celular</h3><p>Por NFC ou lendo o QR Code com a câmera. Sem aplicativo e sem digitar nada.</p></div><div class="card step"><div class="num">3</div><h3>Avalia no Google</h3><p>A tela de avaliação da sua empresa abre direto. O link pode ser trocado depois pelo painel.</p></div></div></div></section>
 <section id="precos"><div class="w"><div class="c"><span class="tag">Preços</span><h2>Quanto custa a placa NexTap</h2><p class="lead">Preço por placa conforme a quantidade. Compre para usar no seu negócio ou para revender a outros ${esc(s.plural)}.</p></div>${tierCards(tiers, minimo)}
 <div class="callout warn"><b>Cuidados importantes</b><p>${esc(s.cuidado)} Seguindo as regras do Google, peça a todos os clientes, sem oferecer vantagens e sem escolher quem avalia.</p></div></div></section>

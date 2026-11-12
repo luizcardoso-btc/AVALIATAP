@@ -187,6 +187,7 @@ const base = (nome, art) => `<h2>Como funciona a placa NexTap em ${art.replace(/
 <ol><li>Você coloca a placa de acrílico em um ponto visível.</li><li>O cliente aproxima o celular (NFC) ou lê o QR Code com a câmera.</li><li>A tela de avaliação do Google abre direto, sem aplicativo e sem digitar nada.</li></ol>
 <p>O QR Code é dinâmico: se o link mudar, você atualiza no painel sem trocar a placa.</p>`;
 
+const { fotos } = require('./seo-fotos.js');
 module.exports = function (ctx) {
   const P = {}, ordemSeg = [], ordemGuia = [];
   const hubPath = '/placas-avaliacao-google-por-segmento';
@@ -195,7 +196,7 @@ module.exports = function (ctx) {
     const path = '/placa-avaliacao-google-para-' + s.slug;
     ordemSeg.push(path);
     P[path] = {
-      tipo: 'segmento', hub: hubPath, nomeCurto: s.nome, seg: { nome: s.nome, art: s.art, plural: s.plural, intro: s.intro, porque: s.porque, onde: s.onde, momento: s.momento, cuidado: s.cuidado }, rel: outros(s.slug).map(o => ({ path: '/placa-avaliacao-google-para-' + o.slug, nome: o.nome })),
+      tipo: 'segmento', hub: hubPath, nomeCurto: s.nome, seg: { slug: s.slug, nome: s.nome, art: s.art, plural: s.plural, intro: s.intro, porque: s.porque, onde: s.onde, momento: s.momento, cuidado: s.cuidado }, rel: outros(s.slug).map(o => ({ path: '/placa-avaliacao-google-para-' + o.slug, nome: o.nome })),
       titulo: cut(`Placa de Avaliação Google para ${s.nome} | NexTap`, 62),
       desc: cut(`Placa NFC e QR Code para ${s.plural}: o cliente aproxima o celular e avalia no Google em segundos. Veja onde colocar e os preços.`, 158),
       h1: `Placa de avaliação Google para ${s.nome.toLowerCase()}`,
@@ -222,7 +223,7 @@ ${base(s.nome, s.art)}
     desc: 'Placas NFC e QR Code para avaliação do Google para restaurantes, clínicas, salões, barbearias, oficinas, hotéis, academias e mais. Escolha o seu segmento.',
     h1: 'Placas de avaliação Google para cada tipo de negócio',
     lead: 'A mesma placa NFC e QR Code funciona em qualquer negócio local, mas o jeito de usar muda de um segmento para outro. Veja onde colocar a placa e quando pedir a avaliação.',
-    corpo: () => `<h2>Escolha o seu segmento</h2><div class="cards">${SEG.map(s => `<a class="card lk" href="/placa-avaliacao-google-para-${s.slug}"><b>${s.nome}</b><span>Avaliações para ${s.plural}</span><i>Ver como funciona →</i></a>`).join('')}</div>
+    corpo: () => `<h2>Escolha o seu segmento</h2><div class="cards">${SEG.map(s => `<a class="card lk" href="/placa-avaliacao-google-para-${s.slug}">${fotos(s.slug)[0] ? `<img class="th" loading="lazy" src="${fotos(s.slug)[0]}" alt="${s.nome}">` : ''}<b>${s.nome}</b><span>Avaliações para ${s.plural}</span><i>Ver como funciona →</i></a>`).join('')}</div>
 <h2>Guias para conseguir mais avaliações</h2><div class="cards">${GUIAS.map(g => `<a class="card lk" href="/${g.slug}"><b>${g.h1}</b><span>${g.lead.split('. ')[0]}.</span><i>Ler o guia →</i></a>`).join('')}</div>
 <h2>Para revendedores</h2><p>Quer vender placas para esses negócios? Veja <a href="/revender-placas-nfc">como revender placas NFC de avaliação do Google</a> e <a href="/fornecedor-placas-nfc-google">o fornecedor NexTap</a>.</p>
 <h2>Preços das placas</h2>${ctx.tabela()}<p class="mut">Valor por placa conforme a quantidade, frete à parte. Pedido mínimo de ${ctx.minimo()} placas.</p>`,
