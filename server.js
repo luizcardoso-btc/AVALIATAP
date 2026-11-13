@@ -79,6 +79,7 @@ app.use('/', require('./prospeccao.js')); // prospecção de empresas locais (ad
 app.use('/', require('./orcamentos.js')); // orçamentos: admin + link público /o/:token
 app.use('/', require('./melhor-envio.js')); // Melhor Envio: cotação, etiqueta e rastreio (admin)
 app.use('/', require('./biosite.js')); // biosites: /b/:slug público, /api/biosites (revendedor) e /api/admin/biosites
+app.use('/', require('./automazap.js').router); // financeiro para o Prédio do Automazap (somente leitura, com segredo)
 app.use('/', require('./routes-public.js')); // /r/:code — link do QR Code / NFC da placa e /api/public/stats
 
 // Site (/), painel do revendedor (/revendedor) e painel admin (/admin) — servidos pelo próprio backend,
