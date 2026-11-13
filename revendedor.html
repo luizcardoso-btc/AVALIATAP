@@ -229,12 +229,12 @@ async function sub(){
     var r,keep=mode==='e'?$('ak').checked:true;
     if(mode==='c'){
       var name=$('an').value.trim();if(!name)throw new Error('Informe seu nome.');
-      r=await api('/auth/register',{method:'POST',body:JSON.stringify({name:name,email:email,whatsapp:$('aw').value.trim(),password:pass})});
+      r=await api('/auth/register',{method:'POST',body:JSON.stringify({name:name,email:email,whatsapp:$('aw').value.trim(),password:pass,lead:(typeof NXL!=='undefined'&&NXL.lead)||undefined})});
     }else if(mode==='r'){
       r=await api('/auth/reset',{method:'POST',body:JSON.stringify({token:RESET_TOKEN,password:pass})});
       try{history.replaceState(null,'',location.pathname)}catch(e){}
     }else{
-      r=await api('/auth/login',{method:'POST',body:JSON.stringify({email:email,password:pass})});
+      r=await api('/auth/login',{method:'POST',body:JSON.stringify({email:email,password:pass,lead:(typeof NXL!=='undefined'&&NXL.lead)||undefined})});
     }
     TOKEN=r.token;saveToken(TOKEN,keep);
     await boot();
@@ -245,6 +245,7 @@ async function boot(){
   await Promise.all([loadTiers(),loadPlates(),loadSales(),loadOrders(),loadGrp()]);await loadVit();
   $('auth').style.display='none';$('app').style.display='grid';
   $('un').textContent=ME.name;$('av').textContent=ME.name.charAt(0).toUpperCase();
+  if(typeof NXL!=='undefined'&&NXL.qtd){var m0=TIERS.length?TIERS[0].min_qty:1;N.azul=Math.max(NXL.qtd,m0);N.preta=0;nxRoboUsado();nav('comprar');return}
   nav('dash');
 }
 function out(){TOKEN=null;ME=null;try{localStorage.removeItem('nx_token');sessionStorage.removeItem('nx_token')}catch(e){}$('app').style.display='none';$('auth').style.display='grid'}
@@ -609,6 +610,19 @@ var qs=new URLSearchParams(location.search),initialTab=qs.get('tab');
 RESET_TOKEN=qs.get('reset');
 at(RESET_TOKEN?'r':initialTab==='login'?'e':'c');
 var RET=qs.get('pedido');
+/* Veio pelo robô do Instagram (?qtd=20&lead=...): guarda por 7 dias, mostra o pedido antes do cadastro e abre "Comprar placas" já com a quantidade */
+var NXL={lead:null,qtd:0};
+(function(){var L=/^[\w-]{6,40}$/,l=qs.get('lead'),q=parseInt(qs.get('qtd'),10);
+  try{var g=JSON.parse(localStorage.getItem('nx_robo')||'null');if(g&&Date.now()-g.em<7*864e5)NXL={lead:g.lead||null,qtd:g.qtd||0}}catch(e){}
+  if(l&&L.test(l))NXL.lead=l;if(q>=1&&q<=100000)NXL.qtd=q;
+  if(l||q){try{localStorage.setItem('nx_robo',JSON.stringify({lead:NXL.lead,qtd:NXL.qtd,em:Date.now()}))}catch(e){}}
+  if(NXL.qtd&&!readToken())fetch('/api/public/price-tiers').then(function(r){return r.json()}).then(function(j){var t=j.tiers||[];if(!t.length)return;
+    var n=Math.max(NXL.qtd,j.minimo||1),u=t[0].unit_price;for(var i=0;i<t.length;i++){if(n>=t[i].min_qty&&n<=t[i].max_qty)u=t[i].unit_price;else if(i===t.length-1&&n>t[i].max_qty)u=t[i].unit_price}
+    var R=function(v){return 'R$ '+Number(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.')};
+    var d=document.createElement('div');d.id='nxped';d.style.cssText='border:1.5px solid var(--pr);background:var(--soft,transparent);border-radius:12px;padding:10px 12px;margin:10px 0 4px;font-size:14px;line-height:1.45';
+    d.innerHTML='<b>Seu pedido está montado: '+n+' placas</b><br>'+R(u)+' cada · '+R(u*n)+' + frete pelo seu CEP.<br><span class="mut">Crie seu acesso (ou entre) para finalizar com Pix ou cartão.</span>';
+    var a=$('at2');if(a&&a.parentNode&&!$('nxped'))a.parentNode.insertBefore(d,a.nextSibling)}).catch(function(){})})();
+function nxRoboUsado(){NXL.qtd=0;try{localStorage.setItem('nx_robo',JSON.stringify({lead:NXL.lead,qtd:0,em:Date.now()}))}catch(e){}}
 (function(){var t=RESET_TOKEN?null:readToken();
 if(t){TOKEN=t;boot().then(function(){if(RET){nav('pedidos');api('/payments/orders/'+RET+'/status').then(function(o){return Promise.all([loadOrders(),loadPlates()]).then(function(){draw();toast(o.status==='pago'?'Pagamento aprovado! Suas placas já estão no estoque ✓':'Recebemos seu retorno. Assim que o pagamento for confirmado o pedido muda para Pago.')})}).catch(function(){});try{history.replaceState(null,'',location.pathname)}catch(e){}}}).catch(function(){out()})}})();
 </script><script src="/catalogo-front.js"></script><script>

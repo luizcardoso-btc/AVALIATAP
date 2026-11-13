@@ -65,6 +65,8 @@ function marcarPago(orderId, opts = {}) {
   const pago = marcarPagoBase(orderId, opts);
   // Compra automática da etiqueta (se ligada). Roda depois, sem travar a confirmação do pagamento.
   if (pago) setImmediate(() => { try { require('./melhor-envio.js').autoComprar(orderId); } catch (e) { console.error('[Melhor Envio] auto:', e.message); } });
+  // Avisa o Automazap (robô do Instagram): a venda é marcada sozinha e os follow-ups param
+  if (pago) { try { require('./automazap.js').avisarPedido('pago', orderId); } catch (e) { console.warn('[AUTOMAZAP]', e.message); } }
   return pago;
 }
 function marcarPagoBase(orderId, { paymentId = null, manual = false, nota = null } = {}) {

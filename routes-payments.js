@@ -184,6 +184,7 @@ router.post('/checkout', requireReseller, async (req, res) => {
   if (cpf) db.prepare('UPDATE resellers SET doc = ? WHERE id = ?').run(cpf, req.resellerId);
   const insItem = db.prepare('INSERT INTO order_items (order_id, produto_id, nome, qty) VALUES (?, ?, ?, ?)');
   itens.forEach(x => insItem.run(orderId, x.produto_id, x.nome, x.qty));
+  try { require('./automazap.js').avisarPedido('pedido', orderId); } catch (e) { console.warn('[AUTOMAZAP]', e.message); }
   // Guarda como endereço padrão do revendedor (o próximo checkout já vem preenchido).
   db.prepare(`UPDATE resellers SET addr_cep=?, addr_street=?, addr_number=?, addr_complement=?, addr_district=?, addr_city=?, addr_state=? WHERE id=?`)
     .run(ship.cep, ship.street, ship.number, ship.complement, ship.district, ship.city, ship.state, req.resellerId);

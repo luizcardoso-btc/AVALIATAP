@@ -26,6 +26,9 @@ router.post('/register', async (req, res) => {
     'INSERT INTO resellers (name, email, whatsapp, password_hash) VALUES (?, ?, ?, ?)'
   ).run(name, email.toLowerCase(), whatsapp || '', hash);
 
+  // Veio pelo robô do Instagram: guarda o lead e avisa o Automazap (não interfere no cadastro)
+  try { const az = require('./automazap.js'); const lead = az.vincularLead(info.lastInsertRowid, (req.body || {}).lead); if (lead) az.notificar('cadastro', { lead }); } catch (e) { console.warn('[AUTOMAZAP]', e.message); }
+
   const token = sign({ id: info.lastInsertRowid, type: 'reseller' });
   res.json({ token, reseller: { id: info.lastInsertRowid, name, email: email.toLowerCase(), whatsapp } });
 });
@@ -40,6 +43,9 @@ router.post('/login', async (req, res) => {
   if (!r) return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
   const ok = await bcrypt.compare(password || '', r.password_hash);
   if (!ok) return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
+
+  // Quem já tinha conta e voltou pelo link do robô também fica ligado ao lead
+  try { require('./automazap.js').vincularLead(r.id, (req.body || {}).lead); } catch (e) { console.warn('[AUTOMAZAP]', e.message); }
 
   const token = sign({ id: r.id, type: 'reseller' });
   res.json({ token, reseller: { id: r.id, name: r.name, email: r.email, whatsapp: r.whatsapp } });
