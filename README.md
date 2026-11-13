@@ -105,3 +105,13 @@ Pix 0,99% / cartão 4,98%), custo do envio (real, informado ao marcar "enviado";
 (únicas ou mensais, rateadas por dia). Mostra lucro por faixa de preço, pedidos no prejuízo e "alertas do contador".
 **Analista com IA** (opcional): defina `ANTHROPIC_API_KEY` (e, se quiser, `ANALISTA_MODELO`) no Railway. Só números
 agregados vão para a IA — nenhum dado de cliente. Estimativa de gestão; tributos confirme com seu contador.
+
+
+## Integração com o Automazap (robô do Instagram)
+O botão "FAZER MEU PEDIDO" do robô abre `/revendedor/?tab=registro&qtd=20&lead=<token>`:
+- antes do cadastro aparece "Seu pedido está montado: 20 placas", com o preço da tabela atual;
+- depois de criar a conta (ou entrar), a pessoa cai em **Comprar placas** já com a quantidade;
+- o revendedor fica ligado ao lead (`resellers.lead_token`) e o NexTap avisa o Automazap em `POST /webhook/nextap`
+  quando ele cria a conta, inicia um pedido e paga. A venda é marcada sozinha no painel do robô e os follow-ups param.
+Variáveis: `AUTOMAZAP_URL` e `NEXTAP_WEBHOOK_SECRET` (o mesmo valor nos dois serviços). Sem elas, nada é enviado e
+o site funciona como antes. Os avisos rodam depois do cadastro/pagamento e nunca os atrasam ou bloqueiam.

@@ -526,6 +526,8 @@ CREATE TABLE IF NOT EXISTS sales (
     inicio TEXT, fim TEXT, cliques INTEGER NOT NULL DEFAULT 0,
     atualizado_em TEXT DEFAULT CURRENT_TIMESTAMP, created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`),
+  // Integração com o Automazap: de qual lead do robô do Instagram veio este revendedor. Só adiciona.
+  db => { if (!db.prepare('PRAGMA table_info(resellers)').all().some(c => c.name === 'lead_token')) db.exec('ALTER TABLE resellers ADD COLUMN lead_token TEXT'); },
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
