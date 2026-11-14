@@ -561,8 +561,8 @@ async function promoEnc(){if(!confirm('Encerrar a promoção agora e voltar à t
 
 function vPro(){
   head('Prospecção','Empresas da sua cidade: o que falar, quem já foi abordado e quando voltar.');
-  var tabs='<div class="chips" style="display:flex;gap:6px;margin-bottom:12px"><button class="btn'+(PTAB==='hoje'?' p':'')+'" onclick="PTAB=\'hoje\';draw()">🎯 Hoje</button><button class="btn'+(PTAB==='lista'?' p':'')+'" onclick="PTAB=\'lista\';draw()">📋 Empresas</button><button class="btn'+(PTAB==='num'?' p':'')+'" onclick="proNum()">📊 Números</button><button class="btn'+(PTAB==='script'?' p':'')+'" onclick="PTAB=\'script\';draw()">🗣 Script do vendedor</button></div>';
-  if(PTAB==='script')return tabs+vProScript();
+  var tabs='<div class="chips" style="display:flex;gap:6px;margin-bottom:12px"><button class="btn'+(PTAB==='hoje'?' p':'')+'" onclick="PTAB=\'hoje\';draw()">🎯 Hoje</button><button class="btn'+(PTAB==='lista'?' p':'')+'" onclick="PTAB=\'lista\';draw()">📋 Empresas</button><button class="btn'+(PTAB==='num'?' p':'')+'" onclick="proNum()">📊 Números</button><button class="btn'+(PTAB==='fluxo'?' p':'')+'" onclick="PTAB=\'fluxo\';draw()">🧭 Fluxo</button><button class="btn'+(PTAB==='script'?' p':'')+'" onclick="PTAB=\'script\';draw()">🗣 Script do vendedor</button></div>';
+  if(PTAB==='script')return tabs+vProScript();if(PTAB==='fluxo')return tabs+vProFluxo();
   if(!PRO)return tabs+'<div class="card mut">Carregando…</div>';if(PRO.erro)return tabs+'<div class="card">'+E(PRO.erro)+'</div>';
   if(PTAB==='hoje')return tabs+vProHoje();if(PTAB==='num')return tabs+vProNum();
   var hoje=pHoje(),L=PRO;
@@ -642,6 +642,49 @@ function vProNum(){var S=PSTAT;if(!S)return '<div class="card mut">Carregando…
   var sc=S.por_score.length?'<div class="card" style="padding:12px;margin:0 0 12px"><b>A pontuação funciona?</b><div class="mut" style="font-size:13px">Fechamento por faixa de pontuação (entre as já abordadas).</div><div class="tw"><table><tr><th></th><th>Abordadas</th><th>Fechadas</th></tr>'+S.por_score.map(function(g){return '<tr><td>'+E(g.nome)+'</td><td>'+g.abordadas+'</td><td><b>'+g.fechadas+'</b></td></tr>'}).join('')+'</table></div></div>':'';
   return k+fn+rt+pTabela('Por segmento',S.segmentos)+pTabela('Por bairro',S.bairros)+mt+og+sc}
 
+/* ===== Fluxo do script de vendas: organograma + fluxograma ===== */
+var PFLCSS='<style>.fl{max-width:880px;margin:0 auto}.fl-n{border:1.5px solid var(--fc,#15803d);background:color-mix(in srgb,var(--fc,#15803d) 11%,transparent);border-radius:12px;padding:10px 12px;text-align:left}.fl-n>b{display:block;font-size:14px}.fl-n>span{display:block;font-size:12.5px;opacity:.85;margin-top:2px;line-height:1.4}.fl-n i{display:inline-block;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.75;margin-bottom:2px}.fl-a{text-align:center;color:#9ca3af;font-size:20px;line-height:22px;height:22px}.fl-r{display:grid;gap:10px;align-items:start}.fl-r>div{display:flex;flex-direction:column;min-width:0}.fl-l{font-size:12px;font-weight:800;text-align:center;margin:0 0 4px;color:var(--fc,#15803d)}.fl-t{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 14px;font-size:12px}.fl-t u{text-decoration:none;display:inline-flex;align-items:center;gap:5px}.fl-t u:before{content:"";width:12px;height:12px;border-radius:4px;border:1.5px solid var(--fc);background:color-mix(in srgb,var(--fc) 14%,transparent)}@media(max-width:720px){.fl-r{grid-template-columns:1fr!important}}</style>';
+function flN(c,tag,t,s){return '<div class="fl-n" style="--fc:'+c+'"><i>'+tag+'</i><b>'+t+'</b>'+(s?'<span>'+s+'</span>':'')+'</div>'}
+function flA(){return '<div class="fl-a">↓</div>'}
+function flR(cols,items){return '<div class="fl-r" style="grid-template-columns:repeat('+cols+',1fr)">'+items.map(function(x){return '<div>'+(x[0]?'<div class="fl-l" style="--fc:'+x[1]+'">'+x[0]+'</div>':'')+x[2]+'</div>'}).join('')+'</div>'}
+function vProFluxo(){
+  var G='#15803d',Y='#b45309',R='#dc2626',B='#2563eb',P='#7c3aed';
+  var h='<div class="fl">'+PFLCSS;
+  h+='<div class="card" style="padding:12px;margin:0 0 12px"><b>Como funciona a máquina de vendas</b><div class="mut" style="font-size:13px">Quem faz o quê, e o caminho de cada empresa, da varredura da Bianca até o pedido fechado. O sistema agenda os retornos sozinho.</div>'
+   +'<div class="fl-t"><u style="--fc:'+G+'">Ação</u><u style="--fc:'+Y+'">Decisão</u><u style="--fc:'+B+'">Sistema (automático)</u><u style="--fc:'+P+'">Pessoa</u><u style="--fc:'+R+'">Perdida</u></div></div>';
+  /* organograma */
+  h+='<h3 style="margin:14px 0 8px">1. Organograma do setor de vendas</h3>';
+  h+=flN(P,'DONO','Luiz','Define preço da placa, meta diária de contatos e fecha as vendas maiores.');
+  h+=flA()+flR(3,[
+   ['','',flN(P,'SETOR DE VENDAS','Bianca · prospecção','Todo dia, 5h17: varre empresas de Feira de Santana, traz telefone, nota e avaliações do Google. Entrega o lote do dia.')],
+   ['','',flN(P,'VENDEDOR','Abordagem e visitas','Segue a aba <b>Hoje</b>: manda a mensagem pronta, liga, visita e registra cada contato.')],
+   ['','',flN(B,'SISTEMA NEXTAP','Automação','Pontua (0–100), monta a fila, agenda retornos (+1, +2, +4 dias), reativa perdidas em 60 dias e mostra os números.')]]);
+  /* fluxograma */
+  h+='<h3 style="margin:18px 0 8px">2. Fluxograma: da varredura ao pedido</h3>';
+  h+=flN(G,'ETAPA 1 · TODO DIA 5H17','Bianca faz a varredura','Busca por segmento e bairro. Ignora quem não tem telefone nem Instagram e quem já está cadastrado.');
+  h+=flA()+flN(B,'ETAPA 2 · AUTOMÁTICO','Sistema pontua e monta a fila "Hoje"','Pouca avaliação + nota baixa + celular = pontuação alta. Retornos vencidos vêm primeiro, depois as novas por pontuação.');
+  h+=flA()+flN(Y,'DECISÃO · QUAL CANAL?','Qual contato a empresa tem?','');
+  h+=flA()+flR(3,[
+   ['Celular','#15803d',flN(G,'DIA 0','WhatsApp: abordagem','Mensagem com o gancho: "vi que a empresa tem N avaliações (nota X)". Termina com a pergunta do vídeo de 15 s.')],
+   ['Só Instagram','#15803d',flN(G,'DIA 0','DM no Instagram','Mesma mensagem (o botão copia o texto). Registre como contato.')],
+   ['Só telefone fixo','#15803d',flN(G,'DIA 0','Ligar ou visitar','Roteiro de ligação (20 s) ou visita presencial (30 s) na aba Script.')]]);
+  h+=flA()+flN(Y,'DECISÃO · RESPONDEU?','A empresa respondeu ou demonstrou interesse?','');
+  h+=flA()+flR(2,[
+   ['NÃO responde','#dc2626',
+     flN(B,'RETORNO AUTOMÁTICO · DIA 1','Demonstração + preço','Link da página do segmento com vídeo e negócios que já usam a placa.')+flA()
+     +flN(B,'RETORNO · DIA 3','Empurrão','"Prefere a azul ou a preta?" Duas opções, não sim ou não.')+flA()
+     +flN(B,'RETORNO · DIA 7','Encerramento','Última mensagem, deixa a porta aberta.')+flA()
+     +flN(R,'FIM DA CADÊNCIA','Perdida: sem resposta','Volta sozinha para "novo" em 60 dias.')],
+   ['SIM, tem interesse','#15803d',
+     flN(G,'INTERESSADO','Vídeo de 15 s, preço e prova social','Mostre a placa funcionando. "A placa sai por R$ X, já levo configurada." Retorno em 2 dias.')+flA()
+     +flN(Y,'DECISÃO · TEVE OBJEÇÃO?','Disse "tá caro", "vou pensar", "falar com o sócio"…','Responda com o roteiro de objeções da aba Script.')+flA()
+     +flR(2,[['Resolveu','#15803d',flN(G,'ORÇAMENTO','Orçamento enviado','Botão "Fazer orçamento" na ficha. Retorno em 2 dias.')],['Não resolveu','#dc2626',flN(R,'PERDIDA','Com motivo','Preço, já tem, sem interesse, não é o decisor, concorrente. Volta em 45 a 120 dias.')]])]]);
+  h+=flA()+flN(Y,'DECISÃO · FECHOU?','O cliente aprovou o orçamento?','Vale só para quem recebeu orçamento. Quem não respondeu já encerrou a cadência acima.');
+  h+=flA()+flR(2,[
+   ['SIM','#15803d',flN(G,'FECHADA ✓','Pedido e entrega','Orçamento vira pedido. Placa configurada com o link da empresa no Google e entregue. Fica registrada a data de fechamento.')],
+   ['NÃO','#dc2626',flN(R,'PERDIDA','Marque o motivo','O sistema reagenda a empresa para tentar de novo depois.')]]);
+  h+=flA()+flN(B,'ETAPA FINAL · AUTOMÁTICO','Aba Números: aprender e melhorar','Conversão por segmento, bairro e faixa de pontuação, motivos de perda e ritmo diário. Ajuste a meta e priorize o que fecha mais.');
+  return h+'</div>'}
 function proForm(p){p=p||{};PV=p;
   var f=function(id,l,v,x){return '<label>'+l+'<input id="'+id+'" value="'+E(v||'')+'" '+(x||'')+'></label>'};
   mo('<h3 style="margin:0">'+(p.id?'Editar empresa':'Nova empresa')+'</h3>'+f('pn','Nome da empresa',p.nome)
