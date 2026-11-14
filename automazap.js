@@ -80,4 +80,4 @@ router.get('/api/integracao/financeiro', (req, res) => {
   } catch (e) { console.error('[AUTOMAZAP] financeiro:', e.message); res.status(500).json({ error: 'Falha ao montar o financeiro.' }); }
 });
 
-module.exports = { notificar, vincularLead, leadDoRevendedor, avisarPedido, limparLead, router };
+module.exports = { notificar, vincularLead, leadDoRevendedor, avisarPedido, limparLead, router, autorizado };
