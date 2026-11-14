@@ -77,7 +77,7 @@ async function api(path,opts){
   return data;
 }
 async function sub(){var email=$('ae').value.trim(),pass=$('ap').value;
-try{var r=await api('/auth/admin-login',{method:'POST',body:JSON.stringify({email:email,password:pass})});TOKEN=r.token;try{localStorage.setItem('nx_admin_token',TOKEN)}catch(e){}await boot()}
+try{var r=await api('/auth/admin-login',{method:'POST',body:JSON.stringify({email:email,password:pass})});TOKEN=r.token;try{localStorage.setItem('nx_admin_token',TOKEN)}catch(e){}try{var vc=sessionStorage.getItem('nx_conectar');if(vc&&vc.indexOf(location.origin+'/admin/conectar-automazap')===0){sessionStorage.removeItem('nx_conectar');location.href=vc;return}}catch(e){}await boot()}
 catch(e){alert(e.message)}}
 function out(){TOKEN=null;try{localStorage.removeItem('nx_admin_token')}catch(e){}$('app').style.display='none';$('auth').style.display='grid'}
 async function boot(){await loadAll();$('auth').style.display='none';$('app').style.display='grid';nav('dash')}

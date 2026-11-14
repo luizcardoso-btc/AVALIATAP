@@ -102,8 +102,8 @@ function salvar({ data, titulo, destino, prompt, origem, custo, enviado_por, pro
 const CUSTO = { low: [0.011, 0.016], medium: [0.042, 0.063], high: [0.167, 0.25] };
 const mes = () => new Date().toISOString().slice(0, 7);
 const gastoMes = () => db.prepare("SELECT COALESCE(SUM(custo_usd), 0) AS v, COUNT(*) AS n FROM artes WHERE origem = 'api' AND substr(criado_em, 1, 7) = ?").get(mes());
-const limiteMes = () => { const v = parseFloat(getS('artes_limite_usd') || '10'); return isFinite(v) && v >= 0 ? v : 10; };
-const apiLigada = () => (process.env.OPENAI_API_KEY || '').length > 20;
+const limiteMes = () => { const v = parseFloat(getS('artes_limite_usd') || '0'); return isFinite(v) && v >= 0 ? v : 0; };
+const apiLigada = () => (process.env.OPENAI_API_KEY || '').length > 20 && limiteMes() > 0;
 function infoApi() { const g = gastoMes(); return { ligada: apiLigada(), modelo: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1', limite_usd: limiteMes(), gasto_usd: Math.round(g.v * 1000) / 1000, geradas_mes: g.n, custos: CUSTO }; }
 async function gerar({ prompt, destino, titulo, qualidade, tamanho, enviado_por, produto_id, order_id }) {
   if (!apiLigada()) { const e = new Error('Para gerar automático, coloque OPENAI_API_KEY no Railway (serviço do NexTap). Sem ela, use o comando no ChatGPT e envie a imagem.'); e.status = 400; throw e; }
@@ -111,6 +111,7 @@ async function gerar({ prompt, destino, titulo, qualidade, tamanho, enviado_por,
   const tam = ['1024x1024', '1024x1536', '1536x1024'].includes(tamanho) ? tamanho : '1024x1024';
   const custo = CUSTO[q][tam === '1024x1024' ? 0 : 1];
   const g = gastoMes(), lim = limiteMes();
+  if (lim <= 0) { const e = new Error('A geração paga está desligada (limite US$ 0, custo zero). Use o comando no ChatGPT, que é grátis.'); e.status = 402; throw e; }
   if (g.v + custo > lim + 1e-9) { const e = new Error(`Limite do mês atingido: US$ ${g.v.toFixed(2)} de US$ ${lim.toFixed(2)}. Aumente em Banco de artes → Limite, ou use o ChatGPT (grátis).`); e.status = 402; throw e; }
   const p = String(prompt || '').trim();
   if (p.length < 10) { const e = new Error('Escreva o comando da imagem.'); e.status = 400; throw e; }
@@ -192,7 +193,7 @@ router.use('/api/admin/artes', json, adm);
 // Integração com o Automazap (Theo): mesmo segredo do financeiro
 const integ = express.Router();
 integ.use((req, res, next) => {
-  if (!(process.env.NEXTAP_WEBHOOK_SECRET || '').length) return res.status(503).json({ error: 'NEXTAP_WEBHOOK_SECRET não configurado no NexTap.' });
+  if (!require('./automazap.js').segredo().length) return res.status(503).json({ error: 'Integração com o Automazap ainda não conectada.' });
   if (!require('./automazap.js').autorizado(req)) return res.sendStatus(401);
   next();
 });
