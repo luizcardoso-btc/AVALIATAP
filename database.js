@@ -528,6 +528,16 @@ CREATE TABLE IF NOT EXISTS sales (
   );`),
   // Integração com o Automazap: de qual lead do robô do Instagram veio este revendedor. Só adiciona.
   db => { if (!db.prepare('PRAGMA table_info(resellers)').all().some(c => c.name === 'lead_token')) db.exec('ALTER TABLE resellers ADD COLUMN lead_token TEXT'); },
+  // Prospecção turbinada: dados do Google (nota/avaliações) para priorizar, origem do lead (manual/importação/Bianca), pontuação, tentativas da cadência,
+  // motivo de perda padronizado, reativação automática e data de fechamento. Só adiciona.
+  db => {
+    const tem = new Set(db.prepare('PRAGMA table_info(prospectos)').all().map(c => c.name));
+    const add = (n, def) => { if (!tem.has(n)) db.exec(`ALTER TABLE prospectos ADD COLUMN ${n} ${def}`); };
+    add('google_nota', 'REAL'); add('google_avaliacoes', 'INTEGER'); add('maps_url', "TEXT NOT NULL DEFAULT ''");
+    add('origem', "TEXT NOT NULL DEFAULT 'manual'"); add('score', 'INTEGER NOT NULL DEFAULT 0'); add('tentativas', 'INTEGER NOT NULL DEFAULT 0');
+    add('motivo_cod', "TEXT NOT NULL DEFAULT ''"); add('reativar_em', 'TEXT'); add('fechado_em', 'TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_prospectos_origem ON prospectos(origem, criado_em)');
+  },
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
