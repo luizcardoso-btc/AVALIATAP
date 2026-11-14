@@ -538,6 +538,10 @@ CREATE TABLE IF NOT EXISTS sales (
     add('motivo_cod', "TEXT NOT NULL DEFAULT ''"); add('reativar_em', 'TEXT'); add('fechado_em', 'TEXT');
     db.exec('CREATE INDEX IF NOT EXISTS idx_prospectos_origem ON prospectos(origem, criado_em)');
   },
+  // Contagem física de placas em mãos, por modelo (independe dos QR numerados) + pendências com o fornecedor.
+  db => {
+    db.exec(`CREATE TABLE IF NOT EXISTS estoque_fisico (modelo TEXT PRIMARY KEY, qtd INTEGER NOT NULL DEFAULT 0, nota TEXT NOT NULL DEFAULT '', atualizado_em TEXT NOT NULL DEFAULT (datetime('now')))`);
+  },
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });

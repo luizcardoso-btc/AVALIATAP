@@ -5,6 +5,7 @@ const express = require('express');
 const { nanoid } = require('nanoid');
 const db = require('./database.js');
 const exp = require('./exportar-placas.js');
+const F = require('./financeiro.js');
 const { requireAdmin } = require('./auth-middleware.js');
 
 const cfg = () => {
@@ -81,13 +82,48 @@ const resumo = () => {
 const router = express.Router(); router.use('/api/admin/qr-estoque', requireAdmin);
 const err = (res, e) => res.status(e.status || 500).json({ error: e.message || 'Erro inesperado.' });
 
+// Placas físicas em mãos por modelo (contagem sua). "sem_qr" = placas em mãos além dos QR livres numerados.
+const fisico = () => {
+  const m = Object.fromEntries(db.prepare('SELECT modelo, qtd, nota, atualizado_em FROM estoque_fisico').all().map(r => [r.modelo, r]));
+  const total = Object.values(m).reduce((s, r) => s + r.qtd, 0);
+  return { por_modelo: m, total, financeiro: F.estoque().em_maos };
+};
+// Primeira vez: carrega a contagem informada em 14/11/2026 (só se ainda não houver nenhuma).
+function semearFisico() {
+  try {
+    if (db.prepare('SELECT 1 FROM estoque_fisico LIMIT 1').get() || db.prepare("SELECT 1 FROM settings WHERE chave = 'fisico_semeado'").get()) return;
+    const nomes = modelos().map(x => x.modelo), acha = re => nomes.find(n => re.test(n.toLowerCase()));
+    const regras = [['azul', 51, ''], ['preta', 21, ''], [acha(/instagram/), 3, 'Mais 2 placas vieram repetidas no último lote: pedir correção ao fornecedor.'], [acha(/whatsapp/), 9, ''], [acha(/redes sociais/), 6, '']];
+    const ins = db.prepare('INSERT OR IGNORE INTO estoque_fisico (modelo, qtd, nota) VALUES (?, ?, ?)');
+    db.transaction(() => { regras.forEach(([m, q, n]) => { if (m) ins.run(m, q, n); }); db.prepare("INSERT OR REPLACE INTO settings (chave, valor) VALUES ('fisico_semeado', '1')").run(); })();
+  } catch (e) { console.error('[QR-ESTOQUE] semear físico:', e.message); }
+}
+semearFisico();
+
 router.get('/api/admin/qr-estoque', (req, res) => {
   const lotes = db.prepare(`SELECT l.*, (SELECT COUNT(*) FROM qr_estoque e WHERE e.lote_id = l.id) AS total, (SELECT COUNT(*) FROM qr_estoque e WHERE e.lote_id = l.id AND e.status = 'livre') AS livres,
       (SELECT MIN(numero) FROM qr_estoque e WHERE e.lote_id = l.id) AS de, (SELECT MAX(numero) FROM qr_estoque e WHERE e.lote_id = l.id) AS ate FROM qr_lotes l ORDER BY l.id DESC LIMIT 60`).all();
   const usadas = db.prepare(`SELECT e.numero, e.cor, e.usado_em, p.order_id, r.name AS revendedor FROM qr_estoque e LEFT JOIN plates p ON p.id = e.plate_id LEFT JOIN resellers r ON r.id = p.reseller_id
       WHERE e.status = 'usada' ORDER BY e.id DESC LIMIT 60`).all();
   lotes.forEach(l => { l.descricao = descLote(l); });
-  res.json({ config: cfg(), resumo: resumo(), modelos: modelos(), lotes, usadas, proximo_numero: fmt(proximoNumero()) });
+  res.json({ config: cfg(), resumo: resumo(), modelos: modelos(), fisico: fisico(), lotes, usadas, proximo_numero: fmt(proximoNumero()) });
+});
+router.put('/api/admin/qr-estoque/fisico', (req, res) => {
+  const c = (req.body || {}).contagem, notas = (req.body || {}).notas || {};
+  if (!c || typeof c !== 'object') return res.status(400).json({ error: 'Envie a contagem por modelo.' });
+  const validos = new Set(modelos().map(x => x.modelo)), up = db.prepare("INSERT INTO estoque_fisico (modelo, qtd, nota, atualizado_em) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(modelo) DO UPDATE SET qtd = excluded.qtd, nota = excluded.nota, atualizado_em = excluded.atualizado_em");
+  for (const [m, q] of Object.entries(c)) {
+    if (!validos.has(m)) return res.status(400).json({ error: `Modelo "${m}" não existe.` });
+    if (!Number.isInteger(q) || q < 0 || q > 100000) return res.status(400).json({ error: `Quantidade inválida em ${m}.` });
+  }
+  db.transaction(() => { for (const [m, q] of Object.entries(c)) up.run(m, q, String(notas[m] || '').slice(0, 200)); })();
+  res.json({ fisico: fisico() });
+});
+// Faz o "Em mãos" do Financeiro/Fornecedores bater com a soma da contagem física (cria um ajuste de estoque).
+router.post('/api/admin/qr-estoque/fisico/sincronizar', (req, res) => {
+  const f = fisico(), dif = f.total - f.financeiro;
+  if (dif !== 0) db.prepare("INSERT INTO estoque_mov (tipo, data, quantidade, observacao) VALUES ('ajuste', ?, ?, ?)").run(new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), dif, `Contagem física por modelo: ${f.total} placas em mãos (antes: ${f.financeiro})`);
+  res.json({ ajuste: dif, fisico: fisico() });
 });
 router.put('/api/admin/qr-estoque/config', (req, res) => {
   const b = req.body || {}, set = (k, v) => db.prepare('INSERT INTO settings (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor').run(k, String(v));
