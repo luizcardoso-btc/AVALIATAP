@@ -75,6 +75,7 @@ const seoPaginas = require('./seo-paginas.js');
 app.use('/', seoPaginas); // páginas de entrada para Google/IA: fornecedor, como funciona, revenda + /llms.txt
 app.use('/', require('./cardapio.js')); // cardápio inteligente em vídeo: /c/:slug público + admin
 app.use('/', require('./restaurantes.js')); // restaurantes: cardápio digital O Sacoleiro, comissão recorrente (admin)
+app.use('/', require('./marketing-banco.js')); // banco de imagens de marketing (artes do ChatGPT etc.)
 app.use('/', require('./prospeccao.js')); // prospecção de empresas locais (admin)
 app.use('/', require('./orcamentos.js')); // orçamentos: admin + link público /o/:token
 app.use('/', require('./melhor-envio.js')); // Melhor Envio: cotação, etiqueta e rastreio (admin)

@@ -538,6 +538,12 @@ CREATE TABLE IF NOT EXISTS sales (
     add('motivo_cod', "TEXT NOT NULL DEFAULT ''"); add('reativar_em', 'TEXT'); add('fechado_em', 'TEXT');
     db.exec('CREATE INDEX IF NOT EXISTS idx_prospectos_origem ON prospectos(origem, criado_em)');
   },
+  // Banco de imagens de marketing (artes geradas no ChatGPT etc.): metadados aqui, arquivos na pasta marketing-img ao lado do banco.
+  db => {
+    db.exec(`CREATE TABLE IF NOT EXISTS marketing_imagens (
+      id TEXT PRIMARY KEY, nome TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT 'outro', segmento TEXT NOT NULL DEFAULT '', tags TEXT NOT NULL DEFAULT '',
+      mime TEXT NOT NULL, bytes INTEGER NOT NULL DEFAULT 0, largura INTEGER, altura INTEGER, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`);
+  },
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
