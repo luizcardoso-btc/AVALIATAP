@@ -82,20 +82,30 @@ const resumo = () => {
 const router = express.Router(); router.use('/api/admin/qr-estoque', requireAdmin);
 const err = (res, e) => res.status(e.status || 500).json({ error: e.message || 'Erro inesperado.' });
 
-// Placas físicas em mãos por modelo (contagem sua). "sem_qr" = placas em mãos além dos QR livres numerados.
+// Placas físicas em mãos por modelo e fornecedor (contagem sua). "sem_qr" = placas em mãos além dos QR livres numerados.
+const FORNECEDORES = ['CLICK', 'TAPPOU'];
 const fisico = () => {
-  const m = Object.fromEntries(db.prepare('SELECT modelo, qtd, nota, atualizado_em FROM estoque_fisico').all().map(r => [r.modelo, r]));
+  const notas = Object.fromEntries(db.prepare('SELECT modelo, nota FROM estoque_fisico').all().map(r => [r.modelo, r.nota]));
+  const m = {};
+  db.prepare('SELECT modelo, fornecedor, qtd FROM estoque_fisico_forn').all().forEach(r => { (m[r.modelo] = m[r.modelo] || { qtd: 0, nota: notas[r.modelo] || '', forn: {} }); m[r.modelo].forn[r.fornecedor] = r.qtd; m[r.modelo].qtd += r.qtd; });
+  Object.keys(notas).forEach(k => { if (!m[k] && notas[k]) m[k] = { qtd: 0, nota: notas[k], forn: {} }; });
   const total = Object.values(m).reduce((s, r) => s + r.qtd, 0);
-  return { por_modelo: m, total, financeiro: F.estoque().em_maos };
+  const por_fornecedor = Object.fromEntries(FORNECEDORES.map(f => [f, Object.values(m).reduce((s, r) => s + (r.forn[f] || 0), 0)]));
+  return { por_modelo: m, fornecedores: FORNECEDORES, por_fornecedor, total, financeiro: F.estoque().em_maos };
 };
-// Primeira vez: carrega a contagem informada em 14/11/2026 (só se ainda não houver nenhuma).
+// Primeira vez: carrega a contagem por fornecedor informada em 14/11/2026 (só se ainda não houver nenhuma).
 function semearFisico() {
   try {
-    if (db.prepare('SELECT 1 FROM estoque_fisico LIMIT 1').get() || db.prepare("SELECT 1 FROM settings WHERE chave = 'fisico_semeado'").get()) return;
+    if (db.prepare('SELECT 1 FROM estoque_fisico_forn LIMIT 1').get() || db.prepare("SELECT 1 FROM settings WHERE chave = 'fisico_forn_semeado'").get()) return;
     const nomes = modelos().map(x => x.modelo), acha = re => nomes.find(n => re.test(n.toLowerCase()));
-    const regras = [['azul', 51, ''], ['preta', 21, ''], [acha(/instagram/), 3, 'Mais 2 placas vieram repetidas no último lote: pedir correção ao fornecedor.'], [acha(/whatsapp/), 9, ''], [acha(/redes sociais/), 6, '']];
-    const ins = db.prepare('INSERT OR IGNORE INTO estoque_fisico (modelo, qtd, nota) VALUES (?, ?, ?)');
-    db.transaction(() => { regras.forEach(([m, q, n]) => { if (m) ins.run(m, q, n); }); db.prepare("INSERT OR REPLACE INTO settings (chave, valor) VALUES ('fisico_semeado', '1')").run(); })();
+    const regras = [['CLICK', 'azul', 31], ['CLICK', 'preta', 8], ['CLICK', acha(/redes sociais/), 6], ['CLICK', acha(/whatsapp/), 9], ['TAPPOU', 'azul', 19], ['TAPPOU', 'preta', 13], ['TAPPOU', acha(/instagram/), 3]];
+    const ins = db.prepare('INSERT OR IGNORE INTO estoque_fisico_forn (fornecedor, modelo, qtd) VALUES (?, ?, ?)');
+    const insota = db.prepare('INSERT INTO estoque_fisico (modelo, qtd, nota) VALUES (?, 0, ?) ON CONFLICT(modelo) DO UPDATE SET nota = excluded.nota');
+    db.transaction(() => {
+      regras.forEach(([f, m, q]) => { if (m) ins.run(f, m, q); });
+      const ig = acha(/instagram/); if (ig) insota.run(ig, 'Mais 2 placas vieram repetidas no último lote (TAPPOU): pedir correção ao fornecedor.');
+      db.prepare("INSERT OR REPLACE INTO settings (chave, valor) VALUES ('fisico_forn_semeado', '1')").run();
+    })();
   } catch (e) { console.error('[QR-ESTOQUE] semear físico:', e.message); }
 }
 semearFisico();
@@ -111,12 +121,17 @@ router.get('/api/admin/qr-estoque', (req, res) => {
 router.put('/api/admin/qr-estoque/fisico', (req, res) => {
   const c = (req.body || {}).contagem, notas = (req.body || {}).notas || {};
   if (!c || typeof c !== 'object') return res.status(400).json({ error: 'Envie a contagem por modelo.' });
-  const validos = new Set(modelos().map(x => x.modelo)), up = db.prepare("INSERT INTO estoque_fisico (modelo, qtd, nota, atualizado_em) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(modelo) DO UPDATE SET qtd = excluded.qtd, nota = excluded.nota, atualizado_em = excluded.atualizado_em");
-  for (const [m, q] of Object.entries(c)) {
+  const validos = new Set(modelos().map(x => x.modelo));
+  for (const [m, por] of Object.entries(c)) {
     if (!validos.has(m)) return res.status(400).json({ error: `Modelo "${m}" não existe.` });
-    if (!Number.isInteger(q) || q < 0 || q > 100000) return res.status(400).json({ error: `Quantidade inválida em ${m}.` });
+    for (const [f, q] of Object.entries(por || {})) {
+      if (!FORNECEDORES.includes(f)) return res.status(400).json({ error: `Fornecedor "${f}" desconhecido.` });
+      if (!Number.isInteger(q) || q < 0 || q > 100000) return res.status(400).json({ error: `Quantidade inválida em ${m} (${f}).` });
+    }
   }
-  db.transaction(() => { for (const [m, q] of Object.entries(c)) up.run(m, q, String(notas[m] || '').slice(0, 200)); })();
+  const up = db.prepare("INSERT INTO estoque_fisico_forn (modelo, fornecedor, qtd, atualizado_em) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(modelo, fornecedor) DO UPDATE SET qtd = excluded.qtd, atualizado_em = excluded.atualizado_em");
+  const un = db.prepare('INSERT INTO estoque_fisico (modelo, qtd, nota) VALUES (?, 0, ?) ON CONFLICT(modelo) DO UPDATE SET nota = excluded.nota');
+  db.transaction(() => { for (const [m, por] of Object.entries(c)) for (const [f, q] of Object.entries(por || {})) up.run(m, f, q); for (const [m, n] of Object.entries(notas)) if (validos.has(m)) un.run(m, String(n || '').slice(0, 200)); })();
   res.json({ fisico: fisico() });
 });
 // Faz o "Em mãos" do Financeiro/Fornecedores bater com a soma da contagem física (cria um ajuste de estoque).

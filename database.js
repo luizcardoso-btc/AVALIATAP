@@ -542,6 +542,10 @@ CREATE TABLE IF NOT EXISTS sales (
   db => {
     db.exec(`CREATE TABLE IF NOT EXISTS estoque_fisico (modelo TEXT PRIMARY KEY, qtd INTEGER NOT NULL DEFAULT 0, nota TEXT NOT NULL DEFAULT '', atualizado_em TEXT NOT NULL DEFAULT (datetime('now')))`);
   },
+  // Placas em mãos por modelo E por fornecedor (CLICK / TAPPOU).
+  db => {
+    db.exec(`CREATE TABLE IF NOT EXISTS estoque_fisico_forn (modelo TEXT NOT NULL, fornecedor TEXT NOT NULL, qtd INTEGER NOT NULL DEFAULT 0, atualizado_em TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (modelo, fornecedor))`);
+  },
 ];
 
 const versaoAtual = db.pragma('user_version', { simple: true });
