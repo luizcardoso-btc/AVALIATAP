@@ -90,6 +90,9 @@ async function montarZip(placas, { titulo, intro }) {
     { nome: 'placas-qr.pdf', dados: await pdf(placas, titulo) },
     ...placas.map(p => ({ nome: `png_2.037cm/${arq(p.numero)}.png`, dados: png(p.url) })),
   ];
+  // Artes de produção dos pedidos (Banco de artes): vão junto, na pasta artes/, pelo número do pedido
+  let artes = []; try { artes = require('./artes.js').artesDosPedidos(placas.map(p => p.pedido)); } catch (e) { console.error('[EXPORTAR] artes:', e.message); }
+  if (artes.length) { lista.push(...artes); lista[0] = { nome: 'LEIA-ME.txt', dados: Buffer.from(leia + `\r\n- artes/: ${artes.length} arte(s) de impressão dos pedidos (pedido-00012-arte-5.png = arte do pedido #00012). Deixe o quadrado branco reservado para o QR.\r\n`, 'utf8') }; }
   return zip(lista);
 }
 const baseUrl = req => (process.env.SITE_HOST ? 'https://' + process.env.SITE_HOST.replace(/^https?:\/\//, '') : `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');

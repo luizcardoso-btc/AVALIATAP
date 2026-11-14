@@ -55,6 +55,7 @@ const SITE_HOST = (process.env.SITE_HOST || '').trim().toLowerCase().replace(/^h
 const origins = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean);
 if (SITE_HOST) origins.push('https://' + SITE_HOST, 'https://' + SITE_HOST.replace(/^www\./, ''), 'https://www.' + SITE_HOST.replace(/^www\./, ''));
 app.use(cors(origins.length ? { origin: origins } : {}));
+app.use('/', require('./artes.js')); // banco de artes (ChatGPT/OpenAI): /admin/artes, imagens grandes, antes do limite de 1 MB
 app.use(express.json({ limit: '1mb' }));
 
 // Health check (Railway usa para saber se o deploy subiu)
