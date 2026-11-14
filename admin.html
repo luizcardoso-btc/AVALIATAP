@@ -43,7 +43,7 @@ main{padding:24px;min-width:0}.top{display:flex;justify-content:space-between;ga
 
 <div id="app">
 <aside><a class="logo lgc" href="/" aria-label="NexTap"><img src="/logo.png" alt="NexTap" class="lg"></a><small style="margin-top:4px">PAINEL ADMIN · FORNECEDOR</small>
-<small>PAINEL</small><a data-v="dash" onclick="nav('dash')">▦ Visão geral</a><a data-v="revs" onclick="nav('revs')">👥 Revendedores</a><a data-v="pedidos" onclick="nav('pedidos')">📦 Pedidos</a><a data-v="placas" onclick="nav('placas')">▣ Placas emitidas</a><a data-v="gl" onclick="nav('gl')">⭐ Link de Avaliação</a><a data-v="bs" onclick="nav('bs')">🌐 Biosites</a><a data-v="qr" onclick="nav('qr')">📦 QR em estoque</a><a data-v="me" onclick="nav('me')">🚚 Melhor Envio</a><a data-v="orc" onclick="nav('orc')">🧾 Orçamentos</a><a data-v="pro" onclick="nav('pro')">📍 Prospecção</a><a data-v="rest" onclick="nav('rest')">🍽 Restaurantes</a><a data-v="promo" onclick="nav('promo')">🖤 Promoção</a><a data-v="aq" onclick="nav('aq')">📈 Aquisição</a><a data-v="vit" onclick="nav('vit')">🖼️ Vitrine</a><a data-v="mkt" onclick="nav('mkt')">🎨 Marketing (Theo)</a>
+<small>PAINEL</small><a data-v="dash" onclick="nav('dash')">▦ Visão geral</a><a data-v="revs" onclick="nav('revs')">👥 Revendedores</a><a data-v="pedidos" onclick="nav('pedidos')">📦 Pedidos</a><a data-v="placas" onclick="nav('placas')">▣ Placas emitidas</a><a data-v="gl" onclick="nav('gl')">⭐ Link de Avaliação</a><a data-v="bs" onclick="nav('bs')">🌐 Biosites</a><a data-v="qr" onclick="nav('qr')">📦 QR em estoque</a><a data-v="me" onclick="nav('me')">🚚 Melhor Envio</a><a data-v="orc" onclick="nav('orc')">🧾 Orçamentos</a><a data-v="pro" onclick="nav('pro')">📍 Prospecção</a><a data-v="rest" onclick="nav('rest')">🍽 Restaurantes</a><a data-v="promo" onclick="nav('promo')">🖤 Promoção</a><a data-v="aq" onclick="nav('aq')">📈 Aquisição</a><a data-v="vit" onclick="nav('vit')">🖼️ Vitrine</a>
 <small>DOCUMENTOS</small><a data-v="decl" onclick="nav('decl')" style="background:#15803d;color:#fff;font-weight:700">🧾 Declaração e NF-e</a><a href="/admin/catalogo" style="font-weight:700">🛍 Catálogo de produtos</a>
 <small>GESTÃO</small><a data-v="fin" onclick="nav('fin')">💰 Financeiro</a><a data-v="forn" onclick="nav('forn')">🏭 Fornecedores</a><a data-v="cfg" onclick="nav('cfg')">⚙ Preços</a><a data-v="dados" onclick="nav('dados')">🛡 Dados e backups</a>
 <div class="me"><div class="av">A</div><div><b>Admin</b><div class="mut" style="color:#7d8c86">Fornecedor</div></div><button class="btn s" style="margin-left:auto" onclick="out()" title="Sair">⎋</button></div></aside>
@@ -87,11 +87,11 @@ OVER=r[0];REVS=r[1];ORDERS=r[2];PLATES=r[3];TIERS=r[4]}
 function inP(x){var d=U(x.created_at),n=new Date();if(per==='all')return 1;if(per==='today')return d.toDateString()===n.toDateString();if(per==='month')return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();return (n-d)/864e5<=+per}
 function pills(){return '<div class="row">'+[['today','Hoje'],['7','7 dias'],['30','30 dias'],['90','90 dias'],['month','Este mês'],['all','Tudo']].map(function(p){return '<button class="pill '+(per===p[0]?'on':'')+'" onclick="per=\''+p[0]+'\';draw()">'+p[1]+'</button>'}).join('')+'</div>'}
 function head(t,s){$('hd').innerHTML='<h2>'+t+'</h2><span class="mut">'+s+'</span>'}
-function nav(v){cur=v;if(v==='decl'&&typeof loadDecl==='function')loadDecl();if(v==='cfg'&&FRETE===null)loadFrete();if(v==='dados')loadSis();if(v==='gl')loadGl();if(v==='bs')loadBs();if(v==='qr')loadQr();if(v==='me')loadMe();if(v==='orc'){OV=null;loadOrc()}if(v==='pro')loadPro();if(v==='rest')loadRest();if(v==='promo')loadPromo();if(v==='aq')loadAq();if(v==='vit')loadVtA();if(v==='mkt')loadMkt();if(v==='forn')loadForn();if(v==='fin'){if(FT==='lucro')loadLuc();else if(FT==='desp')loadDesp();else if(FT==='cus')loadCus()}document.querySelectorAll('aside a[data-v]').forEach(function(a){a.classList.toggle('on',a.dataset.v===v)});draw()}
+function nav(v){cur=v;if(v==='decl'&&typeof loadDecl==='function')loadDecl();if(v==='cfg'&&FRETE===null)loadFrete();if(v==='dados')loadSis();if(v==='gl')loadGl();if(v==='bs')loadBs();if(v==='qr')loadQr();if(v==='me')loadMe();if(v==='orc'){OV=null;loadOrc()}if(v==='pro')loadPro();if(v==='rest')loadRest();if(v==='promo')loadPromo();if(v==='aq')loadAq();if(v==='vit')loadVtA();if(v==='forn')loadForn();if(v==='fin'){if(FT==='lucro')loadLuc();else if(FT==='desp')loadDesp();else if(FT==='cus')loadCus()}document.querySelectorAll('aside a[data-v]').forEach(function(a){a.classList.toggle('on',a.dataset.v===v)});draw()}
 function mo(h){$('mb').innerHTML=h;$('mo').style.display='grid'}function cl(){$('mo').style.display='none'}
 $('mo').onclick=function(e){if(e.target===this)cl()};
 function draw(){var aviso=(OVER&&OVER.persistente===false)?'<div class="card" style="border-color:#dc2626;margin-bottom:12px"><b style="color:#dc2626">⚠ Atenção: os dados não estão sendo guardados de forma permanente.</b><br><span class="mut">No Railway, crie um Volume (montado em /data) e conecte ao serviço. Até lá, cadastros e pedidos são apagados a cada atualização do sistema.</span></div>':'';
-$('v').innerHTML=aviso+({dash:vDash,revs:vRevs,pedidos:vPedidos,placas:vPlacas,fin:vFin,forn:vForn,cfg:vCfg,dados:vDados,gl:vGl,bs:vBs,qr:vQr,me:vMe,orc:vOrc,pro:vPro,rest:vRest,promo:vPromo,aq:vAq,vit:vVit,mkt:vMkt,decl:(typeof vDecl==='function'?vDecl:function(){return ''})})[cur]()}
+$('v').innerHTML=aviso+({dash:vDash,revs:vRevs,pedidos:vPedidos,placas:vPlacas,fin:vFin,forn:vForn,cfg:vCfg,dados:vDados,gl:vGl,bs:vBs,qr:vQr,me:vMe,orc:vOrc,pro:vPro,rest:vRest,promo:vPromo,aq:vAq,vit:vVit,decl:(typeof vDecl==='function'?vDecl:function(){return ''})})[cur]()}
 async function baixarBackup(){
   try{
     var r=await fetch(API_BASE+'/admin/backup',{headers:{Authorization:'Bearer '+TOKEN}});
@@ -1052,46 +1052,6 @@ var VTA_NOMES={black:'Black NexTap',grupo:'Grupo de ofertas do WhatsApp',academy
 var VTA_ICO={black:'🖤',grupo:'📣',academy:'🎓'};
 var VTA_DEST=[['','Sem botão'],['comprar','Comprar placas'],['pedidos','Meus pedidos'],['placas','Minhas placas'],['vendas','Vendas'],['academy','NFC Academy'],['grupo','Grupo de ofertas do WhatsApp'],['url','Link externo (https://…)']];
 var VTA_TEMA={verde:'linear-gradient(125deg,#052e16,#16a34a)',preto:'linear-gradient(125deg,#1f1f1f,#050505)',dourado:'linear-gradient(125deg,#1a1304,#c99a1f)'};
-
-/* ===== Marketing (Theo): banco de imagens + comandos do ChatGPT ===== */
-var MKT=null,MKF='todos';
-var MKP=[
-['Comando-mestre (cole 1x no início do chat)','Você é o diretor de arte da NexTap, marca brasileira de placas de acrílico com NFC e QR Code para pequenos negócios. Regras fixas para TODAS as imagens: 1) Nunca escreva texto, letras, números, logotipos nem QR Code na imagem; deixe áreas limpas para eu aplicar texto depois. 2) Formato vertical 4:5 (1080x1350) salvo se eu pedir outro. 3) Fotografia publicitária realista, luz natural suave, cores quentes, comércio local brasileiro (Feira de Santana, BA), pessoas naturais com aparência brasileira. 4) Deixe 30% do quadro livre (topo ou base) para texto. 5) Mantenha consistência de personagem, paleta e luz em toda a série. 6) Se eu anexar foto da placa NexTap, reproduza o objeto fielmente (acrílico transparente, proporção e posição do QR). Responda "pronto" e aguarde meu pedido.'],
-['Ficha de personagem','Crie a ficha de personagem de [NOME], [idade] anos, dono(a) de [tipo de negócio] em Feira de Santana. Mostre 3 ângulos (frente, 3/4, perfil), roupa de trabalho, expressão amistosa, sem texto. Vou reutilizar este personagem em todas as imagens: guarde as características e repita idênticas.'],
-['Placa no balcão (anexe a foto da placa)','Coloque exatamente esta placa de acrílico sobre o balcão de [barbearia/restaurante/salão/clínica], levemente inclinada, foco na placa, fundo desfocado do ambiente, uma mão de cliente aproximando o celular. Sem texto adicional na imagem. Formato 4:5, espaço livre no topo.'],
-['Carrossel novelinha (1 capítulo por imagem)','Capítulo [N] de 6 da história de [PERSONAGEM] (mesmo personagem da ficha). Cena: [descreva]. Clima de novela: close emocional, luz dramática suave. Sem texto, 30% livre na base. Mantenha figurino e cenário consistentes. Arco: 1 problema, 2 frustração, 3 descobre a placa, 4 instala, 5 clientes avaliando, 6 resultado.'],
-['Mockup grátis para o prospect (anexe a foto do negócio)','Mostre uma placa de acrílico transparente com QR Code (sem desenhar o código) apoiada no balcão deste negócio, integrada à cena real, mesma iluminação e perspectiva. Não altere o resto da foto. Sem texto.'],
-['Fundo para anúncio','Fundo abstrato premium para anúncio, gradiente preto e verde-limão, textura de acrílico e reflexos de luz, sem texto, 4:5, centro livre.']
-];
-async function loadMkt(){try{MKT=await api('/admin/marketing/imagens')}catch(e){MKT={erro:e.message}}if(cur==='mkt')draw()}
-function vMkt(){
-  if(MKT===null)return '<div class="card">Carregando…</div>';
-  if(MKT.erro)return '<div class="card">Erro: '+E(MKT.erro)+'</div>';
-  var tipos=['placa','cena','personagem','fundo','mockup','slide','video','outro'];
-  var lista=MKT.filter(function(i){return MKF==='todos'||i.tipo===MKF});
-  var h='<h2>🎨 Marketing (Theo)</h2><p class="mut">Banco de imagens da NexTap. Gere a arte no ChatGPT com os comandos abaixo (sempre sem texto), suba aqui e use o link público em posts, anúncios e carrosséis.</p>';
-  h+='<div class="card"><b>Enviar imagens</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">'
-   +'<select id="mkTipo">'+tipos.map(function(t){return '<option>'+t+'</option>'}).join('')+'</select>'
-   +'<input id="mkSeg" placeholder="Segmento (ex.: barbearia)" style="max-width:180px">'
-   +'<input id="mkTags" placeholder="Tags (ex.: capitulo1, ana)" style="max-width:200px">'
-   +'<input type="file" id="mkFile" accept="image/png,image/jpeg,image/webp" multiple>'
-   +'<button class="btn" onclick="mkEnviar()">Enviar</button></div><small class="mut">PNG, JPG ou WEBP, até 10 MB cada.</small></div>';
-  h+='<div class="card"><b>Comandos para o ChatGPT</b>'+MKP.map(function(p,i){return '<details style="margin-top:8px"><summary>'+E(p[0])+'</summary><textarea readonly rows="5" style="width:100%;margin-top:6px" id="mkp'+i+'">'+E(p[1])+'</textarea><button class="btn" onclick="mkCopiar('+i+')">Copiar comando</button></details>'}).join('')+'</div>';
-  h+='<div style="margin:12px 0"><button class="btn'+(MKF==='todos'?' p':'')+'" onclick="MKF=\'todos\';draw()">Todos ('+MKT.length+')</button> '+tipos.map(function(t){return '<button class="btn'+(MKF===t?' p':'')+'" onclick="MKF=\''+t+'\';draw()">'+t+'</button>'}).join(' ')+'</div>';
-  h+=lista.length?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">'+lista.map(function(i){var u=location.origin+i.url;return '<div class="card" style="padding:8px"><a href="'+E(i.url)+'" target="_blank"><img src="'+E(i.url)+'" loading="lazy" style="width:100%;border-radius:8px;aspect-ratio:4/5;object-fit:cover"></a><div style="font-size:12px;margin-top:6px"><b>'+E(i.nome||'(sem nome)')+'</b><br>'+E(i.tipo)+(i.segmento?' · '+E(i.segmento):'')+(i.tags?'<br>'+E(i.tags):'')+(i.largura?'<br>'+i.largura+'×'+i.altura:'')+'</div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn s" onclick="mkLink(\''+E(i.url)+'\')">Copiar link</button><button class="btn s" onclick="mkDel(\''+i.id+'\')">Excluir</button></div></div>'}).join('')+'</div>':'<p class="mut">Nenhuma imagem ainda.</p>';
-  return h;
-}
-function mkCopiar(i){var t=$('mkp'+i);t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand('copy')}toast('Comando copiado')}
-function mkLink(u){var l=location.origin+u;try{navigator.clipboard.writeText(l)}catch(e){}toast('Link copiado')}
-async function mkEnviar(){
-  var fs=$('mkFile').files;if(!fs.length){toast('Escolha ao menos uma imagem');return}
-  var ok=0;for(var k=0;k<fs.length;k++){var f=fs[k];
-    var q='?tipo='+encodeURIComponent($('mkTipo').value)+'&segmento='+encodeURIComponent($('mkSeg').value)+'&tags='+encodeURIComponent($('mkTags').value)+'&nome='+encodeURIComponent(f.name.replace(/\.[^.]+$/,''));
-    try{var r=await fetch(API_BASE+'/admin/marketing/imagens'+q,{method:'POST',headers:{'Content-Type':f.type,'Authorization':'Bearer '+TOKEN},body:f});
-      if(r.ok)ok++;else{var j=await r.json().catch(function(){return{}});toast(j.error||'Falha ao enviar '+f.name)}}catch(e){toast('Falha de conexão')}}
-  if(ok)toast(ok+' imagem(ns) enviada(s)');loadMkt();
-}
-async function mkDel(id){if(!confirm('Excluir esta imagem? Não dá para desfazer.'))return;try{await api('/admin/marketing/imagens/'+id,{method:'DELETE'})}catch(e){toast(e.message)}loadMkt()}
 async function loadVtA(){try{VTA=await api('/admin/vitrine')}catch(e){VTA={erro:e.message}}if(cur==='vit')draw()}
 function vtaData(v){if(!v)return '';var m=/^(\d{4})-(\d{2})-(\d{2})T?(\d{2})?:?(\d{2})?/.exec(v);return m?m[3]+'/'+m[2]+(m[4]?' '+m[4]+':'+m[5]:''):''}
 function vVit(){head('Vitrine do Dashboard','Os banners que o revendedor vê no topo do painel, deslizando para o lado. Aqui você liga, desliga, reordena e cria os seus.');
