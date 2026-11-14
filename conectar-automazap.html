@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Conectar Automazap · NexTap</title><link rel="icon" type="image/png" href="/favicon.png">
+<style>
+:root{--pr:#15803d;--bg:#f6f7f9;--cd:#fff;--tx:#111827;--mu:#6b7280;--bd:#e5e7eb}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1115;--cd:#181b21;--tx:#f3f4f6;--mu:#9ca3af;--bd:#2a2f38}}
+body{margin:0;font:16px/1.55 system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--tx);display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:18px;padding:28px;max-width:460px;width:100%;text-align:center}
+h1{font-size:21px;margin:8px 0}.mut{color:var(--mu);font-size:14px}.ic{font-size:44px}
+a.bt{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:var(--pr);color:#fff;font-weight:700;text-decoration:none}
+</style>
+</head>
+<body><div class="card"><div class="ic" id="ic">🔗</div><h1 id="t">Conectando ao Automazap…</h1><p class="mut" id="m">Um instante.</p><div id="b"></div></div>
+<script>
+var q=new URLSearchParams(location.search),volta=q.get('volta')||'',codigo=q.get('codigo')||'',TOKEN=null;try{TOKEN=localStorage.getItem('nx_admin_token')}catch(e){}
+function fim(ic,t,m,b){document.getElementById('ic').textContent=ic;document.getElementById('t').textContent=t;document.getElementById('m').textContent=m;document.getElementById('b').innerHTML=b||''}
+function ehs(u){return String(u).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+(async function(){
+  if(!volta||!codigo){fim('⚠️','Link incompleto','Abra este link pelo botão "Conectar ao NexTap" no painel do Automazap.');return}
+  if(!TOKEN){try{sessionStorage.setItem('nx_conectar',location.href)}catch(e){}fim('🔐','Entre no admin primeiro','Faça login no painel do NexTap e depois toque de novo em "Conectar ao NexTap" no Automazap.','<a class="bt" href="/admin/">Entrar no admin</a>');return}
+  try{
+    var r=await fetch('/api/admin/automazap/conectar',{method:'POST',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify({volta:volta})});
+    if(r.status===401){fim('🔐','Sessão expirada','Entre de novo no admin do NexTap e toque outra vez em "Conectar ao NexTap" no Automazap.','<a class="bt" href="/admin/">Entrar no admin</a>');return}
+    var j=await r.json();if(!r.ok)throw new Error(j.error||'Falha no NexTap.');
+    var r2=await fetch(volta.replace(/\/+$/,'')+'/integracao/parear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo:codigo,segredo:j.segredo,base:j.base})});
+    var j2={};try{j2=await r2.json()}catch(e){}
+    if(!r2.ok)throw new Error(j2.error||('O Automazap respondeu '+r2.status+'.'));
+    fim('✅','NexTap e Automazap conectados!','O Otávio já pode ler o financeiro, o Theo já usa o banco de artes e os avisos de pedido e pagamento vão sozinhos para o robô. Pode fechar esta aba.','<a class="bt" href="'+ehs(volta)+'/#predio">Voltar ao Prédio</a>');
+  }catch(e){fim('❌','Não consegui conectar',e.message+' Toque de novo em "Conectar ao NexTap" no Automazap (o código vale 10 minutos).')}
+})();
+</script></body></html>
